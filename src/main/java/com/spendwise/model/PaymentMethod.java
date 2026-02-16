@@ -20,4 +20,7 @@ public class PaymentMethod extends BaseEntity {
     @Enumerated
     @Column(name = "PAYMENT_METHOD_TYPE")
     private PaymentMethodType paymentMethodType;
+
+    @Column(name = "ENABLED")
+    private Boolean enabled;
 }
