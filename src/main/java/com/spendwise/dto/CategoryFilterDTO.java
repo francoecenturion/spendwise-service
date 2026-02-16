@@ -3,10 +3,9 @@ package com.spendwise.dto;
 import lombok.Data;
 
 @Data
-public class PaymentMethodDTO {
+public class CategoryFilterDTO {
 
-    private Long id;
     private String name;
-    private String paymentMethodType;
     private Boolean enabled;
+
 }
