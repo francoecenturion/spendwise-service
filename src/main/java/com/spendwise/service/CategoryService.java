@@ -1,15 +1,21 @@
 package com.spendwise.service;
 
 import com.spendwise.dto.CategoryDTO;
+import com.spendwise.dto.CategoryFilterDTO;
+import com.spendwise.model.Category;
 import com.spendwise.model.Category;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.service.interfaces.ICategoryService;
+import com.spendwise.spec.CategoryEspecification;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -53,11 +59,13 @@ public class CategoryService implements ICategoryService {
     }
 
     @Override
-    public List<CategoryDTO> list() {
+    public Page<CategoryDTO> list(CategoryFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
-        return categoryRepository.findAll().stream()
-                .map(category -> modelMapper.map(category, CategoryDTO.class))
-                .collect(Collectors.toList());
+
+        Specification<Category> spec = CategoryEspecification.withFilters(filters);
+
+        return categoryRepository.findAll(spec, pageable)
+                .map(category -> modelMapper.map(category, CategoryDTO.class));
     }
 
     @Transactional

@@ -1,6 +1,7 @@
 package com.spendwise.unittest;
 
 import com.spendwise.dto.CategoryDTO;
+import com.spendwise.dto.CategoryFilterDTO;
 import com.spendwise.model.Category;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.service.CategoryService;
@@ -13,12 +14,20 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Category Unit Tests")
@@ -110,18 +119,24 @@ public class CategoryServiceTest {
         category2.setEnabled(true);
 
         List<Category> categories = Arrays.asList(category1, category2);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO(); // todos los campos en null
 
         // Act
-        Mockito.when(categoryRepository.findAll()).thenReturn(categories);
-        List<CategoryDTO> obtained = categoryService.list();
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
 
         // Assert
-        assertEquals(2, obtained.size());
-        assertEquals("Alimentación", obtained.get(0).getName());
-        assertEquals("Transporte", obtained.get(1).getName());
-        assertTrue(obtained.get(0).getEnabled());
-        assertTrue(obtained.get(1).getEnabled());
-
+        assertEquals(2, obtained.getTotalElements());
+        assertEquals(2, obtained.getContent().size());
+        assertEquals("Alimentación", obtained.getContent().get(0).getName());
+        assertEquals("Transporte", obtained.getContent().get(1).getName());
+        assertTrue(obtained.getContent().get(0).getEnabled());
+        assertTrue(obtained.getContent().get(1).getEnabled());
     }
 
     @Test
@@ -144,7 +159,7 @@ public class CategoryServiceTest {
         Category category = modelMapper.map(categoryDTO, Category.class);
 
         Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
-        Mockito.when(categoryRepository.save(Mockito.any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         CategoryDTO obtained = categoryService.update(id, newCategoryDTO);
@@ -156,6 +171,199 @@ public class CategoryServiceTest {
         Mockito.verifyNoMoreInteractions(categoryRepository);
 
     }
+
+
+    @Test
+    @DisplayName("List categories with name filter")
+    public void testListWithNameFilter() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setName("Aliment");
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertEquals("Alimentación", obtained.getContent().get(0).getName());
+    }
+
+    @Test
+    @DisplayName("List categories with enabled filter true")
+    public void testListWithEnabledFilterTrue() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setEnabled(true);
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertTrue(obtained.getContent().get(0).getEnabled());
+    }
+
+    @Test
+    @DisplayName("List categories with enabled filter false")
+    public void testListWithEnabledFilterFalse() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Inactiva");
+        category1.setEnabled(false);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setEnabled(false);
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertFalse(obtained.getContent().get(0).getEnabled());
+    }
+
+    @Test
+    @DisplayName("List categories with multiple filters")
+    public void testListWithMultipleFilters() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setName("Aliment");
+        filters.setEnabled(true);
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertEquals("Alimentación", obtained.getContent().get(0).getName());
+        assertTrue(obtained.getContent().get(0).getEnabled());
+    }
+
+    @Test
+    @DisplayName("List categories with no results")
+    public void testListWithNoResults() {
+        // Arrange
+        List<Category> categories = Collections.emptyList();
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setName("NoExiste");
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(0, obtained.getTotalElements());
+        assertTrue(obtained.getContent().isEmpty());
+    }
+
+    @Test
+    @DisplayName("List categories with pagination")
+    public void testListWithPagination() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+
+        Category category2 = new Category();
+        category2.setId(2L);
+        category2.setName("Transporte");
+        category2.setEnabled(true);
+
+        List<Category> categories = Arrays.asList(category1, category2);
+        Page<Category> categoryPage = new PageImpl<>(categories, PageRequest.of(0, 10), 25);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(25, obtained.getTotalElements()); // total de registros
+        assertEquals(2, obtained.getContent().size()); // registros en esta página
+        assertEquals(3, obtained.getTotalPages()); // total de páginas (25/10 = 3)
+        assertEquals(0, obtained.getNumber()); // página actual
+    }
+
+    @Test
+    @DisplayName("List categories with custom page size")
+    public void testListWithCustomPageSize() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 5); // tamaño de página personalizado
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(5, pageable.getPageSize());
+        assertEquals(1, obtained.getContent().size());
+    }
+
 
     @Test
     @DisplayName("Delete category removes it from the database")
@@ -202,7 +410,7 @@ public class CategoryServiceTest {
         Category category = modelMapper.map(categoryDTO, Category.class);
 
         Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
-        Mockito.when(categoryRepository.save(Mockito.any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         CategoryDTO obtained = categoryService.disable(id, newCategoryDTO);
