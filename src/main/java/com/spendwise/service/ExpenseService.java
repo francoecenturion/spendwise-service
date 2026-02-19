@@ -26,8 +26,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ExpenseService implements IExpenseService {
@@ -58,6 +56,7 @@ public class ExpenseService implements IExpenseService {
         expense.setDate(dto.getDate());
         expense.setCategory(modelMapper.map(dto.getCategory(), Category.class));
         expense.setPaymentMethod(modelMapper.map(dto.getPaymentMethod(), PaymentMethod.class));
+        expense.setIsMicroExpense(dto.getMicroExpense());
     }
 
     @Transactional

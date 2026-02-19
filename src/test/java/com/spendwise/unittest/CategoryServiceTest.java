@@ -255,6 +255,108 @@ public class CategoryServiceTest {
     }
 
     @Test
+    @DisplayName("List categories with isIncome filter true (income categories only)")
+    public void testListWithIsIncomeFilterTrue() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Salario");
+        category1.setEnabled(true);
+        category1.setIsIncome(true);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setIsIncome(true);
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertTrue(obtained.getContent().get(0).getIsIncome());
+    }
+
+    @Test
+    @DisplayName("List categories with isIncome filter false (expense categories only)")
+    public void testListWithIsIncomeFilterFalse() {
+        // Arrange
+        Category category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Alimentación");
+        category1.setEnabled(true);
+        category1.setIsIncome(false);
+
+        List<Category> categories = Arrays.asList(category1);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        filters.setIsIncome(false);
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertFalse(obtained.getContent().get(0).getIsIncome());
+    }
+
+    @Test
+    @DisplayName("List all categories without isIncome filter (both income and expense categories)")
+    public void testListWithoutIsIncomeFilter() {
+        // Arrange
+        Category expenseCategory = new Category();
+        expenseCategory.setId(1L);
+        expenseCategory.setName("Alimentación");
+        expenseCategory.setEnabled(true);
+        expenseCategory.setIsIncome(false);
+
+        Category incomeCategory = new Category();
+        incomeCategory.setId(2L);
+        incomeCategory.setName("Salario");
+        incomeCategory.setEnabled(true);
+        incomeCategory.setIsIncome(true);
+
+        List<Category> categories = Arrays.asList(expenseCategory, incomeCategory);
+        Page<Category> categoryPage = new PageImpl<>(categories);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        CategoryFilterDTO filters = new CategoryFilterDTO();
+        // No se setea isIncome - debería traer ambos tipos
+
+        // Act
+        Mockito.when(categoryRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(categoryPage);
+
+        Page<CategoryDTO> obtained = categoryService.list(filters, pageable);
+
+        // Assert
+        assertEquals(2, obtained.getTotalElements());
+
+        // Verificar que hay una de cada tipo
+        long incomeCount = obtained.getContent().stream()
+                .filter(CategoryDTO::getIsIncome)
+                .count();
+        long expenseCount = obtained.getContent().stream()
+                .filter(c -> !c.getIsIncome())
+                .count();
+
+        assertEquals(1, incomeCount);
+        assertEquals(1, expenseCount);
+    }
+
+
+
+    @Test
     @DisplayName("List categories with multiple filters")
     public void testListWithMultipleFilters() {
         // Arrange

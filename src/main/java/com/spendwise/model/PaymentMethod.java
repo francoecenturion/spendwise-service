@@ -23,4 +23,7 @@ public class PaymentMethod extends BaseEntity {
 
     @Column(name = "ENABLED")
     private Boolean enabled;
+
+    @Column(name = "ICON_URL")
+    private String icon;
 }

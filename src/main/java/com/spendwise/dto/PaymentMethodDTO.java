@@ -9,4 +9,5 @@ public class PaymentMethodDTO {
     private String name;
     private String paymentMethodType;
     private Boolean enabled;
+    private String icon;
 }
