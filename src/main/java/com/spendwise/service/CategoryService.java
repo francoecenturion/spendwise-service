@@ -37,6 +37,7 @@ public class CategoryService implements ICategoryService {
     @Override
     public void populate(Category category, CategoryDTO dto) {
         category.setName(dto.getName());
+        category.setIsIncome(dto.getIsIncome());
     }
 
     @Transactional
