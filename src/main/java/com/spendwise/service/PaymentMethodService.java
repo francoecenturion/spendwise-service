@@ -40,6 +40,7 @@ public class PaymentMethodService implements IPaymentMethodService {
     public void populate(PaymentMethod paymentMethod, PaymentMethodDTO dto) {
         paymentMethod.setName(dto.getName());
         paymentMethod.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
+        paymentMethod.setIcon(dto.getIcon());
     }
 
     @Transactional

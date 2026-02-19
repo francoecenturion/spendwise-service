@@ -17,5 +17,6 @@ public class ExpenseFilterDTO {
     private LocalDate endDate;
     private Long categoryId;           // Para desplegable de categorías
     private Long paymentMethodId;      // Para desplegable de métodos de pago
+    private Boolean isMicroExpense;
 
 }

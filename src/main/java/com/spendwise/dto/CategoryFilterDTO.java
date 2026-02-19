@@ -7,5 +7,6 @@ public class CategoryFilterDTO {
 
     private String name;
     private Boolean enabled;
+    private Boolean isIncome;
 
 }

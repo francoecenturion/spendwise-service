@@ -65,6 +65,13 @@ public class ExpenseSpecification {
                         filters.getPaymentMethodId()));
             }
 
+            // Filtro por ID de método de pago (desde desplegable)
+            if (filters.getIsMicroExpense() != null) {
+                predicates.add(cb.equal(root.get("isMicroExpense").get("id"),
+                        filters.getIsMicroExpense()));
+            }
+
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
