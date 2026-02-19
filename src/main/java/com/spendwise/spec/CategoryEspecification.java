@@ -4,7 +4,6 @@ import com.spendwise.dto.CategoryFilterDTO;
 import com.spendwise.model.Category;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.jpa.repository.query.JpqlQueryBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +23,9 @@ public class CategoryEspecification {
                 predicates.add(cb.equal(root.get("enabled"), filters.getEnabled()));
             }
 
+            if (filters.getIsIncome() != null) {
+                predicates.add(cb.equal(root.get("isIncome"), filters.getIsIncome()));
+            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
