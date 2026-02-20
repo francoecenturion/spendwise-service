@@ -9,5 +9,6 @@ public class CurrencyDTO  {
     private Long id;
     private String name;
     private String symbol;
+    private Boolean enabled;
 
 }

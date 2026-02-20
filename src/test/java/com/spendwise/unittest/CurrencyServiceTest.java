@@ -211,11 +211,39 @@ public class CurrencyServiceTest {
         Mockito.when(currencyRepository.save(any(Currency.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        CurrencyDTO obtained = currencyService.disable(id, currencyDTO);
+        CurrencyDTO obtained = currencyService.disable(id);
 
         // Assert
         assertEquals(currencyDTO, obtained);
         assertFalse(currency.getEnabled());
+        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).save(currency);
+        Mockito.verifyNoMoreInteractions(currencyRepository);
+    }
+
+    @Test
+    @DisplayName("Enable currency sets enabled flag to true")
+    public void testEnable() throws Exception {
+        // Arrange
+        Long id = 1L;
+
+        CurrencyDTO currencyDTO = new CurrencyDTO();
+        currencyDTO.setId(id);
+        currencyDTO.setName("Peso Argentino");
+        currencyDTO.setSymbol("$");
+
+        Currency currency = modelMapper.map(currencyDTO, Currency.class);
+        currency.setEnabled(false);
+
+        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.save(any(Currency.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        CurrencyDTO obtained = currencyService.enable(id);
+
+        // Assert
+        assertEquals(currencyDTO, obtained);
+        assertTrue(currency.getEnabled());
         Mockito.verify(currencyRepository).findById(id);
         Mockito.verify(currencyRepository).save(currency);
         Mockito.verifyNoMoreInteractions(currencyRepository);

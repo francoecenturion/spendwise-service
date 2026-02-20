@@ -90,12 +90,21 @@ public class CategoryService implements ICategoryService {
 
     @Transactional
     @Override
-    public CategoryDTO disable(Long id, CategoryDTO dto) throws ChangeSetPersister.NotFoundException {
+    public CategoryDTO disable(Long id) throws ChangeSetPersister.NotFoundException {
         Category category = find(id);
-        this.populate(category, dto);
         category.setEnabled(false);
         Category savedCategory = categoryRepository.save(category);
         log.debug("Category with id {} disabled successfully", category.getId());
+        return modelMapper.map(savedCategory, CategoryDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public CategoryDTO enable(Long id) throws ChangeSetPersister.NotFoundException {
+        Category category = find(id);
+        category.setEnabled(true);
+        Category savedCategory = categoryRepository.save(category);
+        log.debug("Category with id {} enabled successfully", category.getId());
         return modelMapper.map(savedCategory, CategoryDTO.class);
     }
 
