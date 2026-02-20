@@ -70,10 +70,18 @@ public class PaymentMethodController {
                 .ok(paymentMethod);
     }
 
-    @PutMapping("/{id}/disable")
-    public ResponseEntity<PaymentMethodDTO> disable(@PathVariable Long id, PaymentMethodDTO dto) throws ChangeSetPersister.NotFoundException {
-        PaymentMethodDTO paymentMethod = iPaymentMethodService.disable(id, dto);
+    @PatchMapping("/{id}/disable")
+    public ResponseEntity<PaymentMethodDTO> disable(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethodDTO paymentMethod = iPaymentMethodService.disable(id);
         log.debug("DISABLE Payment Method Finished {}", paymentMethod);
+        return ResponseEntity
+                .ok(paymentMethod);
+    }
+
+    @PatchMapping("/{id}/enable")
+    public ResponseEntity<PaymentMethodDTO> enable(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethodDTO paymentMethod = iPaymentMethodService.enable(id);
+        log.debug("ENABLE Payment Method Finished {}", paymentMethod);
         return ResponseEntity
                 .ok(paymentMethod);
     }

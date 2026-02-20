@@ -1,10 +1,8 @@
 package com.spendwise.service;
 
-import com.spendwise.dto.CategoryFilterDTO;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.dto.PaymentMethodFilterDTO;
 import com.spendwise.enums.PaymentMethodType;
-import com.spendwise.model.Category;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.interfaces.IPaymentMethodService;
@@ -19,9 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PaymentMethodService implements IPaymentMethodService {
@@ -91,12 +86,21 @@ public class PaymentMethodService implements IPaymentMethodService {
 
     @Transactional
     @Override
-    public PaymentMethodDTO disable(Long id, PaymentMethodDTO dto) throws ChangeSetPersister.NotFoundException {
+    public PaymentMethodDTO disable(Long id) throws ChangeSetPersister.NotFoundException {
         PaymentMethod paymentMethod = find(id);
-        this.populate(paymentMethod, dto);
         paymentMethod.setEnabled(false);
         PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
         log.debug("PaymentMethod with id {} disabled successfully", paymentMethod.getId());
+        return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public PaymentMethodDTO enable(Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethod paymentMethod = find(id);
+        paymentMethod.setEnabled(true);
+        PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        log.debug("Payment Method with id {} enabled successfully", paymentMethod.getId());
         return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
     }
 
