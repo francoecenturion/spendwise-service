@@ -67,10 +67,18 @@ public class CategoryController {
                 .ok(category);
     }
 
-    @PutMapping("/{id}/disable")
-    public ResponseEntity<CategoryDTO> disable(@PathVariable Long id, CategoryDTO dto) throws ChangeSetPersister.NotFoundException {
-        CategoryDTO category = iCategoryService.disable(id, dto);
+    @PatchMapping("/{id}/disable")
+    public ResponseEntity<CategoryDTO> disable(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        CategoryDTO category = iCategoryService.disable(id);
         log.debug("DISABLE Category Finished {}", category);
+        return ResponseEntity
+                .ok(category);
+    }
+
+    @PatchMapping("/{id}/enable")
+    public ResponseEntity<CategoryDTO> enable(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        CategoryDTO category = iCategoryService.enable(id);
+        log.debug("ENABLE Category Finished {}", category);
         return ResponseEntity
                 .ok(category);
     }
