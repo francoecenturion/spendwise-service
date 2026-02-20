@@ -459,24 +459,43 @@ public class PaymentMethodServiceTest {
         paymentMethodDTO.setName("Mercado Pago");
         paymentMethodDTO.setPaymentMethodType("DEBIT_CARD");
         paymentMethodDTO.setEnabled(true);
-
-        PaymentMethodDTO newPaymentMethodDTO = new PaymentMethodDTO();
-        newPaymentMethodDTO.setId(id);
-        newPaymentMethodDTO.setName("Mercado Pago");
-        newPaymentMethodDTO.setPaymentMethodType("DEBIT_CARD");
-        newPaymentMethodDTO.setEnabled(false);
-
-        PaymentMethodDTO expected = newPaymentMethodDTO;
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
         Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
         Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        PaymentMethodDTO obtained = paymentMethodService.disable(id, newPaymentMethodDTO);
+        PaymentMethodDTO obtained = paymentMethodService.disable(id);
 
         // Assert
-        assertEquals(expected, obtained);
+        assertFalse(obtained.getEnabled());
+        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).save(paymentMethod);
+        Mockito.verifyNoMoreInteractions(paymentMethodRepository);
+
+    }
+
+    @Test
+    @DisplayName("Enable payment method sets enabled flag to true")
+    public void testEnable() throws Exception {
+
+        // Arrange
+        Long id = 1L;
+        PaymentMethodDTO paymentMethodDTO = new PaymentMethodDTO();
+        paymentMethodDTO.setId(id);
+        paymentMethodDTO.setName("Mercado Pago");
+        paymentMethodDTO.setPaymentMethodType("DEBIT_CARD");
+        paymentMethodDTO.setEnabled(false);
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+
+        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        PaymentMethodDTO obtained = paymentMethodService.enable(id);
+
+        // Assert
+        assertTrue(obtained.getEnabled());
         Mockito.verify(paymentMethodRepository).findById(id);
         Mockito.verify(paymentMethodRepository).save(paymentMethod);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);

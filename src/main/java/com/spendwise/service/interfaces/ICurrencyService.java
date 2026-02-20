@@ -15,6 +15,7 @@ public interface ICurrencyService {
     Page<CurrencyDTO> list(CurrencyFilterDTO categoryFilterDTO, Pageable pageable);
     CurrencyDTO update(Long id, CurrencyDTO dto) throws ChangeSetPersister.NotFoundException;
     CurrencyDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
-    CurrencyDTO disable(Long id, CurrencyDTO dto) throws ChangeSetPersister.NotFoundException;
+    CurrencyDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
+    CurrencyDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
 
 }

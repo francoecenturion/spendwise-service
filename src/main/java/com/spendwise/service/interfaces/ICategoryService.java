@@ -18,6 +18,7 @@ public interface ICategoryService {
     Page<CategoryDTO> list(CategoryFilterDTO categoryFilterDTO, Pageable pageable);
     CategoryDTO update(Long id, CategoryDTO dto) throws ChangeSetPersister.NotFoundException;
     CategoryDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
-    CategoryDTO disable(Long id, CategoryDTO dto) throws ChangeSetPersister.NotFoundException;
+    CategoryDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
+    CategoryDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
 
 }

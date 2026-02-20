@@ -502,23 +502,42 @@ public class CategoryServiceTest {
         categoryDTO.setId(id);
         categoryDTO.setName("Groceries");
         categoryDTO.setEnabled(true);
-
-        CategoryDTO newCategoryDTO = new CategoryDTO();
-        newCategoryDTO.setId(id);
-        newCategoryDTO.setName("Groceries");
-        newCategoryDTO.setEnabled(false);
-
-        CategoryDTO expected = newCategoryDTO;
         Category category = modelMapper.map(categoryDTO, Category.class);
 
         Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
         Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        CategoryDTO obtained = categoryService.disable(id, newCategoryDTO);
+        CategoryDTO obtained = categoryService.disable(id);
 
         // Assert
-        assertEquals(expected, obtained);
+        assertFalse(obtained.getEnabled());
+        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).save(category);
+        Mockito.verifyNoMoreInteractions(categoryRepository);
+
+    }
+
+    @Test
+    @DisplayName("Enable category sets enabled flag to true")
+    public void testEnable() throws Exception {
+
+        // Arrange
+        Long id = 1L;
+        CategoryDTO categoryDTO = new CategoryDTO();
+        categoryDTO.setId(id);
+        categoryDTO.setName("Groceries");
+        categoryDTO.setEnabled(false);
+        Category category = modelMapper.map(categoryDTO, Category.class);
+
+        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        CategoryDTO obtained = categoryService.enable(id);
+
+        // Assert
+        assertTrue(obtained.getEnabled());
         Mockito.verify(categoryRepository).findById(id);
         Mockito.verify(categoryRepository).save(category);
         Mockito.verifyNoMoreInteractions(categoryRepository);

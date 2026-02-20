@@ -86,12 +86,21 @@ public class CurrencyService implements ICurrencyService {
 
     @Transactional
     @Override
-    public CurrencyDTO disable(Long id, CurrencyDTO dto) throws ChangeSetPersister.NotFoundException {
+    public CurrencyDTO disable(Long id) throws ChangeSetPersister.NotFoundException {
         Currency currency = find(id);
-        this.populate(currency, dto);
         currency.setEnabled(false);
         Currency savedCurrency = currencyRepository.save(currency);
         log.debug("Currency with id {} disabled successfully", currency.getId());
+        return modelMapper.map(savedCurrency, CurrencyDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public CurrencyDTO enable(Long id) throws ChangeSetPersister.NotFoundException {
+        Currency currency = find(id);
+        currency.setEnabled(true);
+        Currency savedCurrency = currencyRepository.save(currency);
+        log.debug("Currency with id {} enabled successfully", currency.getId());
         return modelMapper.map(savedCurrency, CurrencyDTO.class);
     }
 

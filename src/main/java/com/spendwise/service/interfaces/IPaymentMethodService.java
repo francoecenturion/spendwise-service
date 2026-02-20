@@ -15,6 +15,7 @@ public interface IPaymentMethodService {
     Page<PaymentMethodDTO> list(PaymentMethodFilterDTO filters, Pageable pageable);
     PaymentMethodDTO update(Long id, PaymentMethodDTO dto) throws ChangeSetPersister.NotFoundException;
     PaymentMethodDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
-    PaymentMethodDTO disable(Long id, PaymentMethodDTO dto) throws ChangeSetPersister.NotFoundException;
+    PaymentMethodDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
+    PaymentMethodDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
 
 }
