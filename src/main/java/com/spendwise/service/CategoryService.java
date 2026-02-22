@@ -3,7 +3,6 @@ package com.spendwise.service;
 import com.spendwise.dto.CategoryDTO;
 import com.spendwise.dto.CategoryFilterDTO;
 import com.spendwise.model.Category;
-import com.spendwise.model.Category;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.service.interfaces.ICategoryService;
 import com.spendwise.spec.CategoryEspecification;
@@ -18,8 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CategoryService implements ICategoryService {
@@ -37,7 +34,7 @@ public class CategoryService implements ICategoryService {
     @Override
     public void populate(Category category, CategoryDTO dto) {
         category.setName(dto.getName());
-        category.setIsIncome(dto.getIsIncome());
+        category.setType(dto.getType());
     }
 
     @Transactional

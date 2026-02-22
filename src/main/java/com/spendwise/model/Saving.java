@@ -20,11 +20,18 @@ public class Saving extends BaseEntity {
     @JoinColumn(name ="CURRENCY_ID")
     private Currency currency;
 
+    @ManyToOne
+    @JoinColumn(name = "SAVINGS_WALLET_ID")
+    private SavingsWallet savingsWallet;
+
     @Column(name = "AMOUNT_ARS")
     private BigDecimal amountInPesos;
 
     @Column(name = "AMOUNT_USD")
     private BigDecimal amountInDollars;
+
+    @Column(name = "DATE")
+    private LocalDate date;
 
 
 }

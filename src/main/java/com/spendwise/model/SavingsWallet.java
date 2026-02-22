@@ -1,6 +1,6 @@
 package com.spendwise.model;
 
-import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.enums.SavingsWalletType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -11,25 +11,19 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
-@Table(name = "PAYMENT_METHOD")
-public class PaymentMethod extends BaseEntity {
+@Table(name = "SAVINGS_WALLET")
+public class SavingsWallet extends BaseEntity {
 
     @Column(name = "NAME")
     private String name;
 
     @Enumerated
-    @Column(name = "PAYMENT_METHOD_TYPE")
-    private PaymentMethodType paymentMethodType;
+    @Column(name = "SAVINGS_WALLET_TYPE")
+    private SavingsWalletType savingsWalletType;
 
     @Column(name = "ENABLED")
     private Boolean enabled;
 
-    @Column(name = "ICON_URL")
+    @Column(name = "ICON")
     private String icon;
-
-    @Column(name = "ISSUING_ENTITY")
-    private String issuingEntity;
-
-    @Column(name = "BRAND")
-    private String brand;
 }
