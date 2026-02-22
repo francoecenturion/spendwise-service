@@ -1,13 +1,11 @@
 package com.spendwise.dto;
 
-import com.spendwise.enums.CategoryType;
 import lombok.Data;
 
 @Data
-public class CategoryFilterDTO {
+public class SavingsWalletFilterDTO {
 
     private String name;
+    private String savingsWalletType;
     private Boolean enabled;
-    private CategoryType type;
-
 }
