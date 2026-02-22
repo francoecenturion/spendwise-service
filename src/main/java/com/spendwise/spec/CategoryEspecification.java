@@ -15,7 +15,7 @@ public class CategoryEspecification {
             List<Predicate> predicates = new ArrayList<>();
 
             if (filters.getName() != null && !filters.getName().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("description")),
+                predicates.add(cb.like(cb.lower(root.get("name")),
                         "%" + filters.getName().toLowerCase() + "%"));
             }
 
@@ -23,13 +23,12 @@ public class CategoryEspecification {
                 predicates.add(cb.equal(root.get("enabled"), filters.getEnabled()));
             }
 
-            if (filters.getIsIncome() != null) {
-                predicates.add(cb.equal(root.get("isIncome"), filters.getIsIncome()));
+            if (filters.getType() != null) {
+                predicates.add(cb.equal(root.get("type"), filters.getType()));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
-
 
 }

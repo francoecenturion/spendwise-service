@@ -67,6 +67,31 @@ public class PaymentMethodServiceTest {
     }
 
     @Test
+    @DisplayName("Create payment method with issuingEntity and brand stores and returns both fields")
+    public void testCreateWithIssuingEntityAndBrand() {
+
+        // Arrange
+        PaymentMethodDTO paymentMethodDTO = new PaymentMethodDTO();
+        paymentMethodDTO.setName("Galicia Mastercard");
+        paymentMethodDTO.setPaymentMethodType("CREDIT_CARD");
+        paymentMethodDTO.setIssuingEntity("Banco Galicia");
+        paymentMethodDTO.setBrand("Mastercard");
+        paymentMethodDTO.setEnabled(true);
+
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+
+        // Act
+        Mockito.when(paymentMethodRepository.save(paymentMethod)).thenReturn(paymentMethod);
+        PaymentMethodDTO obtained = paymentMethodService.create(paymentMethodDTO);
+
+        // Assert
+        assertEquals("Banco Galicia", obtained.getIssuingEntity());
+        assertEquals("Mastercard", obtained.getBrand());
+        Mockito.verify(paymentMethodRepository).save(paymentMethod);
+        Mockito.verifyNoMoreInteractions(paymentMethodRepository);
+    }
+
+    @Test
     @DisplayName("Find payment method by ID returns the paymentMethod when it exists")
     public void testFindById() throws Exception {
 
@@ -385,6 +410,35 @@ public class PaymentMethodServiceTest {
         obtained.getContent().forEach(pm ->
                 assertEquals("CREDIT_CARD", pm.getPaymentMethodType())
         );
+    }
+
+    @Test
+    @DisplayName("List payment methods filtering by transfer type")
+    public void testListFilteringByTransfer() {
+        // Arrange
+        PaymentMethod paymentMethod1 = new PaymentMethod();
+        paymentMethod1.setId(1L);
+        paymentMethod1.setName("Transferencia Bancaria");
+        paymentMethod1.setPaymentMethodType(PaymentMethodType.TRANSFER);
+        paymentMethod1.setEnabled(true);
+
+        List<PaymentMethod> paymentMethods = Arrays.asList(paymentMethod1);
+        Page<PaymentMethod> paymentMethodPage = new PageImpl<>(paymentMethods);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        PaymentMethodFilterDTO filters = new PaymentMethodFilterDTO();
+        filters.setPaymentMethodType("TRANSFER");
+
+        // Act
+        Mockito.when(paymentMethodRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(paymentMethodPage);
+
+        Page<PaymentMethodDTO> obtained = paymentMethodService.list(filters, pageable);
+
+        // Assert
+        assertEquals(1, obtained.getTotalElements());
+        assertEquals("Transferencia Bancaria", obtained.getContent().get(0).getName());
+        assertEquals("TRANSFER", obtained.getContent().get(0).getPaymentMethodType());
     }
 
     @Test

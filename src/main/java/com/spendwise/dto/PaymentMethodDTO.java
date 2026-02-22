@@ -10,4 +10,6 @@ public class PaymentMethodDTO {
     private String paymentMethodType;
     private Boolean enabled;
     private String icon;
+    private String issuingEntity;
+    private String brand;
 }
