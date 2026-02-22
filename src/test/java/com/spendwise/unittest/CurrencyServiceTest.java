@@ -214,6 +214,7 @@ public class CurrencyServiceTest {
         CurrencyDTO obtained = currencyService.disable(id);
 
         // Assert
+        currencyDTO.setEnabled(false);
         assertEquals(currencyDTO, obtained);
         assertFalse(currency.getEnabled());
         Mockito.verify(currencyRepository).findById(id);
@@ -242,6 +243,7 @@ public class CurrencyServiceTest {
         CurrencyDTO obtained = currencyService.enable(id);
 
         // Assert
+        currencyDTO.setEnabled(true);
         assertEquals(currencyDTO, obtained);
         assertTrue(currency.getEnabled());
         Mockito.verify(currencyRepository).findById(id);

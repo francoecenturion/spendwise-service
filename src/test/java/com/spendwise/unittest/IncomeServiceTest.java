@@ -4,6 +4,7 @@ import com.spendwise.client.dolarApi.DolarApiClient;
 import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalClient;
 import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.CategoryDTO;
+import com.spendwise.enums.CategoryType;
 import com.spendwise.dto.IncomeDTO;
 import com.spendwise.dto.IncomeFilterDTO;
 import com.spendwise.model.Category;
@@ -65,13 +66,13 @@ public class IncomeServiceTest {
         source.setId(1L);
         source.setName("Salario");
         source.setEnabled(true);
-        source.setIsIncome(true);
+        source.setType(CategoryType.INCOME);
 
         sourceDTO = new CategoryDTO();
         sourceDTO.setId(1L);
         sourceDTO.setName("Salario");
         sourceDTO.setEnabled(true);
-        sourceDTO.setIsIncome(true);
+        sourceDTO.setType(CategoryType.INCOME);
     }
 
     @Test

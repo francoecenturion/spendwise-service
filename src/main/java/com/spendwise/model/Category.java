@@ -1,9 +1,7 @@
 package com.spendwise.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
-import jakarta.persistence.Table;
+import com.spendwise.enums.CategoryType;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -19,7 +17,8 @@ public class Category extends BaseEntity {
     @Column(name = "ENABLED")
     private Boolean enabled;
 
-    @Column(name = "INCOME")
-    private Boolean isIncome;
+    @Column(name = "TYPE")
+    @Enumerated(EnumType.STRING)
+    private CategoryType type;
 
 }

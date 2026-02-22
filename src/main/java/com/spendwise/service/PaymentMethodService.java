@@ -36,6 +36,8 @@ public class PaymentMethodService implements IPaymentMethodService {
         paymentMethod.setName(dto.getName());
         paymentMethod.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
         paymentMethod.setIcon(dto.getIcon());
+        paymentMethod.setIssuingEntity(dto.getIssuingEntity());
+        paymentMethod.setBrand(dto.getBrand());
     }
 
     @Transactional
