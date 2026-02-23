@@ -1,9 +1,12 @@
 package com.spendwise.unittest;
 
+import com.spendwise.dto.IssuingEntityDTO;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.dto.PaymentMethodFilterDTO;
 import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.PaymentMethodService;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +42,9 @@ public class PaymentMethodServiceTest {
     @Mock
     private PaymentMethodRepository paymentMethodRepository;
 
+    @Mock
+    private IssuingEntityRepository issuingEntityRepository;
+
     @InjectMocks
     private PaymentMethodService paymentMethodService;
 
@@ -71,24 +77,40 @@ public class PaymentMethodServiceTest {
     public void testCreateWithIssuingEntityAndBrand() {
 
         // Arrange
+        IssuingEntity issuingEntity = new IssuingEntity();
+        issuingEntity.setId(1L);
+        issuingEntity.setDescription("Banco Galicia");
+        issuingEntity.setEnabled(true);
+
+        IssuingEntityDTO issuingEntityDTO = new IssuingEntityDTO();
+        issuingEntityDTO.setId(1L);
+        issuingEntityDTO.setDescription("Banco Galicia");
+
         PaymentMethodDTO paymentMethodDTO = new PaymentMethodDTO();
         paymentMethodDTO.setName("Galicia Mastercard");
         paymentMethodDTO.setPaymentMethodType("CREDIT_CARD");
-        paymentMethodDTO.setIssuingEntity("Banco Galicia");
+        paymentMethodDTO.setIssuingEntity(issuingEntityDTO);
         paymentMethodDTO.setBrand("Mastercard");
         paymentMethodDTO.setEnabled(true);
 
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+        PaymentMethod paymentMethod = new PaymentMethod();
+        paymentMethod.setName("Galicia Mastercard");
+        paymentMethod.setPaymentMethodType(PaymentMethodType.CREDIT_CARD);
+        paymentMethod.setIssuingEntity(issuingEntity);
+        paymentMethod.setBrand("Mastercard");
+        paymentMethod.setEnabled(true);
 
         // Act
-        Mockito.when(paymentMethodRepository.save(paymentMethod)).thenReturn(paymentMethod);
+        Mockito.when(issuingEntityRepository.findById(1L)).thenReturn(Optional.of(issuingEntity));
+        Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
         PaymentMethodDTO obtained = paymentMethodService.create(paymentMethodDTO);
 
         // Assert
-        assertEquals("Banco Galicia", obtained.getIssuingEntity());
+        assertEquals("Banco Galicia", obtained.getIssuingEntity().getDescription());
         assertEquals("Mastercard", obtained.getBrand());
-        Mockito.verify(paymentMethodRepository).save(paymentMethod);
-        Mockito.verifyNoMoreInteractions(paymentMethodRepository);
+        Mockito.verify(issuingEntityRepository).findById(1L);
+        Mockito.verify(paymentMethodRepository).save(any(PaymentMethod.class));
+        Mockito.verifyNoMoreInteractions(paymentMethodRepository, issuingEntityRepository);
     }
 
     @Test
