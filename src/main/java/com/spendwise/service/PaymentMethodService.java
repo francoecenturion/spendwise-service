@@ -3,7 +3,9 @@ package com.spendwise.service;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.dto.PaymentMethodFilterDTO;
 import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.interfaces.IPaymentMethodService;
 import com.spendwise.spec.PaymentMethodEspecification;
@@ -24,11 +26,14 @@ public class PaymentMethodService implements IPaymentMethodService {
     private static final Logger log = LoggerFactory.getLogger(PaymentMethodService.class);
 
     private final PaymentMethodRepository paymentMethodRepository;
+    private final IssuingEntityRepository issuingEntityRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Autowired
-    public PaymentMethodService(PaymentMethodRepository paymentMethodRepository) {
+    public PaymentMethodService(PaymentMethodRepository paymentMethodRepository,
+                                IssuingEntityRepository issuingEntityRepository) {
         this.paymentMethodRepository = paymentMethodRepository;
+        this.issuingEntityRepository = issuingEntityRepository;
     }
 
     @Override
@@ -36,8 +41,15 @@ public class PaymentMethodService implements IPaymentMethodService {
         paymentMethod.setName(dto.getName());
         paymentMethod.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
         paymentMethod.setIcon(dto.getIcon());
-        paymentMethod.setIssuingEntity(dto.getIssuingEntity());
         paymentMethod.setBrand(dto.getBrand());
+
+        if (dto.getIssuingEntity() != null && dto.getIssuingEntity().getId() != null) {
+            IssuingEntity entity = issuingEntityRepository.findById(dto.getIssuingEntity().getId())
+                    .orElseThrow(() -> new RuntimeException("IssuingEntity not found: " + dto.getIssuingEntity().getId()));
+            paymentMethod.setIssuingEntity(entity);
+        } else {
+            paymentMethod.setIssuingEntity(null);
+        }
     }
 
     @Transactional
