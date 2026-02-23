@@ -1,10 +1,7 @@
 package com.spendwise.model;
 
 import com.spendwise.enums.PaymentMethodType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -27,8 +24,9 @@ public class PaymentMethod extends BaseEntity {
     @Column(name = "ICON_URL")
     private String icon;
 
-    @Column(name = "ISSUING_ENTITY")
-    private String issuingEntity;
+    @ManyToOne
+    @JoinColumn(name = "ISSUING_ENTITY_ID")
+    private IssuingEntity issuingEntity;
 
     @Column(name = "BRAND")
     private String brand;
