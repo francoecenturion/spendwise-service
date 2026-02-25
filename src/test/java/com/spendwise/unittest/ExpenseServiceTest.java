@@ -2,12 +2,15 @@ package com.spendwise.unittest;
 
 import com.spendwise.client.dolarApi.DolarApiClient;
 import com.spendwise.client.dolarApi.DolarApiDTO;
+import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalClient;
+import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.CategoryDTO;
 import com.spendwise.dto.ExpenseDTO;
 import com.spendwise.dto.ExpenseFilterDTO;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.Category;
+import com.spendwise.model.Currency;
 import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.ExpenseRepository;
@@ -29,6 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,11 +55,16 @@ public class ExpenseServiceTest {
     @Mock
     private DolarApiClient dolarApiClient;
 
+    @Mock
+    private DolarApiHistoricalClient dolarApiHistoricalClient;
+
     @InjectMocks
     private ExpenseService expenseService;
 
     private static PaymentMethod paymentMethod;
     private static Category category;
+    private static Currency currencyARS;
+    private static Currency currencyUSD;
 
     @BeforeAll
     public static void init() {
@@ -69,48 +78,165 @@ public class ExpenseServiceTest {
         paymentMethod.setName("Mercado Pago");
         paymentMethod.setPaymentMethodType(PaymentMethodType.DEBIT_CARD);
         paymentMethod.setEnabled(true);
+
+        currencyARS = new Currency();
+        currencyARS.setId(1L);
+        currencyARS.setName("Peso Argentino");
+        currencyARS.setSymbol("$");
+
+        currencyUSD = new Currency();
+        currencyUSD.setId(2L);
+        currencyUSD.setName("Dolar Estadounidense");
+        currencyUSD.setSymbol("USD");
     }
 
-    @Test
-    @DisplayName("Create expense saves a new expense successfully")
-    public void testCreate() {
-        // Arrange
-        ExpenseDTO expenseDTO = new ExpenseDTO();
-        expenseDTO.setDescription("Greengrocers");
-        expenseDTO.setAmountInPesos(BigDecimal.valueOf(3000));
-        expenseDTO.setDate(LocalDate.now());
-        expenseDTO.setCategory(modelMapper.map(category, CategoryDTO.class));
-        expenseDTO.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+    // ──────────────────────────────────────────────────────────────────────────
+    // CREATE
+    // ──────────────────────────────────────────────────────────────────────────
 
-        Expense expense = new Expense();
-        expense.setId(1L);
-        expense.setDescription("Greengrocers");
-        expense.setAmountInPesos(BigDecimal.valueOf(3000));
-        expense.setAmountInDollars(BigDecimal.valueOf(2));
-        expense.setDate(LocalDate.now());
-        expense.setCategory(category);
-        expense.setPaymentMethod(paymentMethod);
+    @Test
+    @DisplayName("Create expense in ARS with today's date uses DolarApiClient to calculate dollars")
+    public void testCreateWithArsCurrencyToday() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal inputAmount = new BigDecimal("3000");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+        BigDecimal expectedDollars = inputAmount.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Greengrocers");
+        dto.setInputAmount(inputAmount);
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
 
         DolarApiDTO dolarApiDTO = new DolarApiDTO();
-        dolarApiDTO.setType("oficial");
-        dolarApiDTO.setName("Oficial");
-        dolarApiDTO.setCurrency("USD");
-        dolarApiDTO.setUpdateDate(LocalDate.now());
-        dolarApiDTO.setBuyingPrice(BigDecimal.valueOf(1400));
-        dolarApiDTO.setSellingPrice(BigDecimal.valueOf(1500));
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        Mockito.when(dolarApiClient.getRate(any())).thenReturn(dolarApiDTO);
-        Mockito.when(expenseRepository.save(any(Expense.class))).thenReturn(expense);
-
-        ExpenseDTO result = expenseService.create(expenseDTO);
+        ExpenseDTO result = expenseService.create(dto);
 
         // Assert
         assertNotNull(result);
         assertEquals("Greengrocers", result.getDescription());
-        assertEquals(BigDecimal.valueOf(3000), result.getAmountInPesos());
+        assertEquals(inputAmount, result.getAmountInPesos());
+        assertEquals(expectedDollars, result.getAmountInDollars());
+        Mockito.verify(dolarApiClient).getRate("oficial");
         Mockito.verify(expenseRepository).save(any(Expense.class));
     }
+
+    @Test
+    @DisplayName("Create expense in ARS with a past date uses DolarApiHistoricalClient to calculate dollars")
+    public void testCreateWithArsCurrencyPastDate() {
+        // Arrange
+        LocalDate pastDate = LocalDate.of(2024, 6, 15);
+        BigDecimal inputAmount = new BigDecimal("5000");
+        BigDecimal sellingPrice = new BigDecimal("900");
+        BigDecimal expectedDollars = inputAmount.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Supermercado junio");
+        dto.setInputAmount(inputAmount);
+        dto.setDate(pastDate);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
+        historicalDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString())).thenReturn(historicalDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Supermercado junio", result.getDescription());
+        assertEquals(inputAmount, result.getAmountInPesos());
+        assertEquals(expectedDollars, result.getAmountInDollars());
+        Mockito.verify(dolarApiHistoricalClient).getRate("oficial", pastDate.toString());
+        Mockito.verify(expenseRepository).save(any(Expense.class));
+    }
+
+    @Test
+    @DisplayName("Create expense in USD with today's date uses DolarApiClient to calculate pesos")
+    public void testCreateWithUsdCurrencyToday() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal inputAmount = new BigDecimal("100");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+        BigDecimal expectedPesos = inputAmount.multiply(sellingPrice);
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Netflix USD");
+        dto.setInputAmount(inputAmount);
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyUSD);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Netflix USD", result.getDescription());
+        assertEquals(inputAmount, result.getAmountInDollars());
+        assertEquals(expectedPesos, result.getAmountInPesos());
+        Mockito.verify(dolarApiClient).getRate("oficial");
+        Mockito.verify(expenseRepository).save(any(Expense.class));
+    }
+
+    @Test
+    @DisplayName("Create expense in USD with a past date uses DolarApiHistoricalClient to calculate pesos")
+    public void testCreateWithUsdCurrencyPastDate() {
+        // Arrange
+        LocalDate pastDate = LocalDate.of(2024, 3, 10);
+        BigDecimal inputAmount = new BigDecimal("50");
+        BigDecimal sellingPrice = new BigDecimal("850");
+        BigDecimal expectedPesos = inputAmount.multiply(sellingPrice);
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Spotify USD marzo");
+        dto.setInputAmount(inputAmount);
+        dto.setDate(pastDate);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyUSD);
+
+        DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
+        historicalDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString())).thenReturn(historicalDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Spotify USD marzo", result.getDescription());
+        assertEquals(inputAmount, result.getAmountInDollars());
+        assertEquals(expectedPesos, result.getAmountInPesos());
+        Mockito.verify(dolarApiHistoricalClient).getRate("oficial", pastDate.toString());
+        Mockito.verify(expenseRepository).save(any(Expense.class));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // FIND BY ID
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("Find expense by ID returns the expense when it exists")
@@ -125,6 +251,7 @@ public class ExpenseServiceTest {
         expense.setDate(LocalDate.now());
         expense.setCategory(category);
         expense.setPaymentMethod(paymentMethod);
+        expense.setCurrency(currencyARS);
 
         // Act
         Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(expense));
@@ -150,6 +277,10 @@ public class ExpenseServiceTest {
         Mockito.verify(expenseRepository).findById(id);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // LIST
+    // ──────────────────────────────────────────────────────────────────────────
+
     @Test
     @DisplayName("List all expenses returns complete list")
     public void testList() {
@@ -162,6 +293,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         Expense expense2 = new Expense();
         expense2.setId(2L);
@@ -171,6 +303,7 @@ public class ExpenseServiceTest {
         expense2.setDate(LocalDate.now());
         expense2.setCategory(category);
         expense2.setPaymentMethod(paymentMethod);
+        expense2.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1, expense2);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -203,6 +336,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -234,6 +368,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -267,6 +402,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyUSD);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -302,6 +438,7 @@ public class ExpenseServiceTest {
         expense1.setDate(today);
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -334,6 +471,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -365,6 +503,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -398,6 +537,7 @@ public class ExpenseServiceTest {
         expense1.setDate(today);
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1);
         Page<Expense> expensePage = new PageImpl<>(expenses);
@@ -459,6 +599,7 @@ public class ExpenseServiceTest {
         expense1.setDate(LocalDate.now());
         expense1.setCategory(category);
         expense1.setPaymentMethod(paymentMethod);
+        expense1.setCurrency(currencyARS);
 
         Expense expense2 = new Expense();
         expense2.setId(2L);
@@ -468,6 +609,7 @@ public class ExpenseServiceTest {
         expense2.setDate(LocalDate.now());
         expense2.setCategory(category);
         expense2.setPaymentMethod(paymentMethod);
+        expense2.setCurrency(currencyARS);
 
         List<Expense> expenses = Arrays.asList(expense1, expense2);
         Page<Expense> expensePage = new PageImpl<>(expenses, PageRequest.of(0, 10), 25);
@@ -488,45 +630,105 @@ public class ExpenseServiceTest {
         assertEquals(0, result.getNumber());
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // UPDATE
+    // ──────────────────────────────────────────────────────────────────────────
+
     @Test
-    @DisplayName("Update expense modifies existing expense successfully")
-    public void testUpdate() throws ChangeSetPersister.NotFoundException {
+    @DisplayName("Update expense in ARS recalculates amountInDollars via DolarApiClient")
+    public void testUpdateWithArsCurrency() throws ChangeSetPersister.NotFoundException {
         // Arrange
         Long id = 1L;
+        LocalDate today = LocalDate.now();
+        BigDecimal newAmount = new BigDecimal("4000");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+        BigDecimal expectedDollars = newAmount.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
 
         Expense existingExpense = new Expense();
         existingExpense.setId(id);
         existingExpense.setDescription("Old description");
         existingExpense.setAmountInPesos(BigDecimal.valueOf(1000));
-        existingExpense.setAmountInDollars(BigDecimal.valueOf(0.67));
-        existingExpense.setDate(LocalDate.now());
+        existingExpense.setDate(today);
         existingExpense.setCategory(category);
         existingExpense.setPaymentMethod(paymentMethod);
+        existingExpense.setCurrency(currencyARS);
 
         ExpenseDTO updateDTO = new ExpenseDTO();
-        updateDTO.setId(id);
         updateDTO.setDescription("Updated description");
-        updateDTO.setAmountInPesos(BigDecimal.valueOf(1000));
-        updateDTO.setAmountInDollars(BigDecimal.valueOf(0.67));
-        updateDTO.setDate(LocalDate.now());
+        updateDTO.setInputAmount(newAmount);
+        updateDTO.setDate(today);
         updateDTO.setCategory(modelMapper.map(category, CategoryDTO.class));
         updateDTO.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        updateDTO.setCurrency(currencyARS);
 
         DolarApiDTO dolarApiDTO = new DolarApiDTO();
-        dolarApiDTO.setSellingPrice(BigDecimal.valueOf(1500));
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(existingExpense));
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(existingExpense));
-        Mockito.when(dolarApiClient.getRate(any())).thenReturn(dolarApiDTO);
-        Mockito.when(expenseRepository.save(any(Expense.class))).thenReturn(existingExpense);
-
         ExpenseDTO result = expenseService.update(id, updateDTO);
 
         // Assert
         assertNotNull(result);
+        assertEquals("Updated description", result.getDescription());
+        assertEquals(newAmount, result.getAmountInPesos());
+        assertEquals(expectedDollars, result.getAmountInDollars());
         Mockito.verify(expenseRepository).findById(id);
         Mockito.verify(expenseRepository).save(any(Expense.class));
     }
+
+    @Test
+    @DisplayName("Update expense in USD recalculates amountInPesos via historical API")
+    public void testUpdateWithUsdCurrencyPastDate() throws ChangeSetPersister.NotFoundException {
+        // Arrange
+        Long id = 1L;
+        LocalDate pastDate = LocalDate.of(2024, 8, 20);
+        BigDecimal newAmount = new BigDecimal("200");
+        BigDecimal sellingPrice = new BigDecimal("1000");
+        BigDecimal expectedPesos = newAmount.multiply(sellingPrice);
+
+        Expense existingExpense = new Expense();
+        existingExpense.setId(id);
+        existingExpense.setDescription("Old USD expense");
+        existingExpense.setAmountInDollars(BigDecimal.valueOf(100));
+        existingExpense.setDate(pastDate);
+        existingExpense.setCategory(category);
+        existingExpense.setPaymentMethod(paymentMethod);
+        existingExpense.setCurrency(currencyUSD);
+
+        ExpenseDTO updateDTO = new ExpenseDTO();
+        updateDTO.setDescription("Updated USD expense");
+        updateDTO.setInputAmount(newAmount);
+        updateDTO.setDate(pastDate);
+        updateDTO.setCategory(modelMapper.map(category, CategoryDTO.class));
+        updateDTO.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        updateDTO.setCurrency(currencyUSD);
+
+        DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
+        historicalDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(existingExpense));
+        Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString())).thenReturn(historicalDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.update(id, updateDTO);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Updated USD expense", result.getDescription());
+        assertEquals(newAmount, result.getAmountInDollars());
+        assertEquals(expectedPesos, result.getAmountInPesos());
+        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).save(any(Expense.class));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("Delete expense removes it from the database")
@@ -542,6 +744,7 @@ public class ExpenseServiceTest {
         expense.setDate(LocalDate.now());
         expense.setCategory(category);
         expense.setPaymentMethod(paymentMethod);
+        expense.setCurrency(currencyARS);
 
         // Act
         Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(expense));

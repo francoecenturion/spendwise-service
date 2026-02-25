@@ -7,6 +7,7 @@ import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.ExpenseDTO;
 import com.spendwise.dto.ExpenseFilterDTO;
 import com.spendwise.model.Category;
+import com.spendwise.model.Currency;
 import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.ExpenseRepository;
@@ -51,12 +52,32 @@ public class ExpenseService implements IExpenseService {
     @Override
     public void populate(Expense expense, ExpenseDTO dto) {
         expense.setDescription(dto.getDescription());
-        expense.setAmountInPesos(dto.getAmountInPesos());
-        expense.setAmountInDollars(this.calculateAmountInDollars(dto.getAmountInPesos(), dto.getDate()));
         expense.setDate(dto.getDate());
         expense.setCategory(modelMapper.map(dto.getCategory(), Category.class));
         expense.setPaymentMethod(modelMapper.map(dto.getPaymentMethod(), PaymentMethod.class));
         expense.setIsMicroExpense(dto.getMicroExpense());
+
+        if (dto.getCurrency() != null && dto.getCurrency().getId() != null) {
+            Currency currency = modelMapper.map(dto.getCurrency(), Currency.class);
+            expense.setCurrency(currency);
+            BigDecimal inputAmount = dto.getInputAmount() != null ? dto.getInputAmount() : dto.getAmountInPesos();
+            if (isPesosCurrency(currency)) {
+                expense.setAmountInPesos(inputAmount);
+                expense.setAmountInDollars(this.calculateAmountInDollars(inputAmount, dto.getDate()));
+            } else {
+                expense.setAmountInDollars(inputAmount);
+                expense.setAmountInPesos(this.calculateAmountInPesos(inputAmount, dto.getDate()));
+            }
+        } else {
+            expense.setAmountInPesos(dto.getAmountInPesos());
+            expense.setAmountInDollars(this.calculateAmountInDollars(dto.getAmountInPesos(), dto.getDate()));
+        }
+    }
+
+    private boolean isPesosCurrency(Currency currency) {
+        if (currency == null || currency.getName() == null) return true;
+        String name = currency.getName().toLowerCase();
+        return name.contains("peso") || name.contains("ars") || name.contains("argentino");
     }
 
     @Transactional
@@ -130,5 +151,22 @@ public class ExpenseService implements IExpenseService {
         }
 
         return amountInDollars;
+    }
+
+    public BigDecimal calculateAmountInPesos(BigDecimal amountInDollars, LocalDate date) {
+
+        BigDecimal amountInPesos;
+
+        if(LocalDate.now().isEqual(date)) {
+            // Dolar Api
+            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
+            amountInPesos = amountInDollars.multiply(dolarApiDTO.getSellingPrice());
+        } else {
+            // Dolar Api Historical
+            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
+            amountInPesos = amountInDollars.multiply(dolarApiHistoricalDTO.getSellingPrice());
+        }
+
+        return amountInPesos;
     }
 }
