@@ -15,10 +15,15 @@ import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.ExpenseRepository;
 import com.spendwise.service.ExpenseService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -60,6 +65,25 @@ public class ExpenseServiceTest {
 
     @InjectMocks
     private ExpenseService expenseService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     private static PaymentMethod paymentMethod;
     private static Category category;
@@ -254,14 +278,14 @@ public class ExpenseServiceTest {
         expense.setCurrency(currencyARS);
 
         // Act
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(expense));
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(expense));
         ExpenseDTO result = expenseService.findById(id);
 
         // Assert
         assertNotNull(result);
         assertEquals(id, result.getId());
         assertEquals("Supermarket", result.getDescription());
-        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
     }
 
     @Test
@@ -271,10 +295,10 @@ public class ExpenseServiceTest {
         Long id = 999L;
 
         // Act & Assert
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> expenseService.findById(id));
-        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -664,7 +688,7 @@ public class ExpenseServiceTest {
         DolarApiDTO dolarApiDTO = new DolarApiDTO();
         dolarApiDTO.setSellingPrice(sellingPrice);
 
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(existingExpense));
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existingExpense));
         Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
         Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -676,7 +700,7 @@ public class ExpenseServiceTest {
         assertEquals("Updated description", result.getDescription());
         assertEquals(newAmount, result.getAmountInPesos());
         assertEquals(expectedDollars, result.getAmountInDollars());
-        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
         Mockito.verify(expenseRepository).save(any(Expense.class));
     }
 
@@ -710,7 +734,7 @@ public class ExpenseServiceTest {
         DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
         historicalDTO.setSellingPrice(sellingPrice);
 
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(existingExpense));
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existingExpense));
         Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString())).thenReturn(historicalDTO);
         Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -722,7 +746,7 @@ public class ExpenseServiceTest {
         assertEquals("Updated USD expense", result.getDescription());
         assertEquals(newAmount, result.getAmountInDollars());
         assertEquals(expectedPesos, result.getAmountInPesos());
-        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
         Mockito.verify(expenseRepository).save(any(Expense.class));
     }
 
@@ -747,13 +771,13 @@ public class ExpenseServiceTest {
         expense.setCurrency(currencyARS);
 
         // Act
-        Mockito.when(expenseRepository.findById(id)).thenReturn(Optional.of(expense));
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(expense));
         ExpenseDTO result = expenseService.delete(id);
 
         // Assert
         assertNotNull(result);
         assertEquals(id, result.getId());
-        Mockito.verify(expenseRepository).findById(id);
+        Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
         Mockito.verify(expenseRepository).delete(expense);
     }
 }

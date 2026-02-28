@@ -11,10 +11,15 @@ import com.spendwise.model.Category;
 import com.spendwise.model.Income;
 import com.spendwise.repository.IncomeRepository;
 import com.spendwise.service.IncomeService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -56,6 +61,25 @@ public class IncomeServiceTest {
 
     @InjectMocks
     private IncomeService incomeService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     private static Category source;
     private static CategoryDTO sourceDTO;
@@ -124,14 +148,14 @@ public class IncomeServiceTest {
 
         Income income = modelMapper.map(incomeDTO, Income.class);
 
-        Mockito.when(incomeRepository.findById(id)).thenReturn(Optional.of(income));
+        Mockito.when(incomeRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(income));
 
         // Act
         IncomeDTO obtained = incomeService.findById(id);
 
         // Assert
         assertEquals(incomeDTO, obtained);
-        Mockito.verify(incomeRepository).findById(id);
+        Mockito.verify(incomeRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(incomeRepository);
     }
 
@@ -142,7 +166,7 @@ public class IncomeServiceTest {
         Long id = 1L;
 
         // Act & Assert
-        Mockito.when(incomeRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(incomeRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> incomeService.findById(id));
     }
@@ -212,7 +236,7 @@ public class IncomeServiceTest {
         DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
         historicalDTO.setSellingPrice(sellingPrice);
 
-        Mockito.when(incomeRepository.findById(id)).thenReturn(Optional.of(existingIncome));
+        Mockito.when(incomeRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existingIncome));
         Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString()))
                 .thenReturn(historicalDTO);
         Mockito.when(incomeRepository.save(any(Income.class)))
@@ -225,7 +249,7 @@ public class IncomeServiceTest {
         assertEquals("Updated salary", obtained.getDescription());
         assertEquals(amountInPesos, obtained.getAmountInPesos());
         assertEquals(expectedDollars, obtained.getAmountInDollars());
-        Mockito.verify(incomeRepository).findById(id);
+        Mockito.verify(incomeRepository).findByIdAndUser(id, testUser);
         Mockito.verify(incomeRepository).save(any(Income.class));
     }
 
@@ -245,14 +269,14 @@ public class IncomeServiceTest {
 
         Income income = modelMapper.map(incomeDTO, Income.class);
 
-        Mockito.when(incomeRepository.findById(id)).thenReturn(Optional.of(income));
+        Mockito.when(incomeRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(income));
 
         // Act
         IncomeDTO deleted = incomeService.delete(id);
 
         // Assert
         assertEquals(incomeDTO, deleted);
-        Mockito.verify(incomeRepository).findById(id);
+        Mockito.verify(incomeRepository).findByIdAndUser(id, testUser);
         Mockito.verify(incomeRepository).delete(income);
         Mockito.verifyNoMoreInteractions(incomeRepository);
     }

@@ -5,9 +5,14 @@ import com.spendwise.dto.CurrencyFilterDTO;
 import com.spendwise.model.Currency;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.service.CurrencyService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -41,6 +46,25 @@ public class CurrencyServiceTest {
     @InjectMocks
     private CurrencyService currencyService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("Create currency saves a new currency with enabled=true")
     public void testCreate() {
@@ -53,6 +77,7 @@ public class CurrencyServiceTest {
         currency.setName("Peso Argentino");
         currency.setSymbol("$");
         currency.setEnabled(true);
+        currency.setUser(testUser);
 
         Mockito.when(currencyRepository.save(currency)).thenReturn(currency);
 
@@ -79,14 +104,14 @@ public class CurrencyServiceTest {
 
         Currency currency = modelMapper.map(currencyDTO, Currency.class);
 
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(currency));
 
         // Act
         CurrencyDTO obtained = currencyService.findById(id);
 
         // Assert
         assertEquals(currencyDTO, obtained);
-        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(currencyRepository);
     }
 
@@ -97,7 +122,7 @@ public class CurrencyServiceTest {
         Long id = 1L;
 
         // Act & Assert
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> currencyService.findById(id));
     }
@@ -155,7 +180,7 @@ public class CurrencyServiceTest {
 
         Currency currency = modelMapper.map(currentDTO, Currency.class);
 
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(currency));
         Mockito.when(currencyRepository.save(any(Currency.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -163,7 +188,7 @@ public class CurrencyServiceTest {
 
         // Assert
         assertEquals(newDTO, obtained);
-        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).findByIdAndUser(id, testUser);
         Mockito.verify(currencyRepository).save(currency);
         Mockito.verifyNoMoreInteractions(currencyRepository);
     }
@@ -181,14 +206,14 @@ public class CurrencyServiceTest {
 
         Currency currency = modelMapper.map(currencyDTO, Currency.class);
 
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(currency));
 
         // Act
         CurrencyDTO deleted = currencyService.delete(id);
 
         // Assert
         assertEquals(currencyDTO, deleted);
-        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).findByIdAndUser(id, testUser);
         Mockito.verify(currencyRepository).delete(currency);
         Mockito.verifyNoMoreInteractions(currencyRepository);
     }
@@ -207,7 +232,7 @@ public class CurrencyServiceTest {
         Currency currency = modelMapper.map(currencyDTO, Currency.class);
         currency.setEnabled(true);
 
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(currency));
         Mockito.when(currencyRepository.save(any(Currency.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -217,7 +242,7 @@ public class CurrencyServiceTest {
         currencyDTO.setEnabled(false);
         assertEquals(currencyDTO, obtained);
         assertFalse(currency.getEnabled());
-        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).findByIdAndUser(id, testUser);
         Mockito.verify(currencyRepository).save(currency);
         Mockito.verifyNoMoreInteractions(currencyRepository);
     }
@@ -236,7 +261,7 @@ public class CurrencyServiceTest {
         Currency currency = modelMapper.map(currencyDTO, Currency.class);
         currency.setEnabled(false);
 
-        Mockito.when(currencyRepository.findById(id)).thenReturn(Optional.of(currency));
+        Mockito.when(currencyRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(currency));
         Mockito.when(currencyRepository.save(any(Currency.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -246,7 +271,7 @@ public class CurrencyServiceTest {
         currencyDTO.setEnabled(true);
         assertEquals(currencyDTO, obtained);
         assertTrue(currency.getEnabled());
-        Mockito.verify(currencyRepository).findById(id);
+        Mockito.verify(currencyRepository).findByIdAndUser(id, testUser);
         Mockito.verify(currencyRepository).save(currency);
         Mockito.verifyNoMoreInteractions(currencyRepository);
     }

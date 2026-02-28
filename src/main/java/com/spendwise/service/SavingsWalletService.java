@@ -16,7 +16,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 @Service
 public class SavingsWalletService implements ISavingsWalletService {
@@ -44,6 +47,7 @@ public class SavingsWalletService implements ISavingsWalletService {
         SavingsWallet savingsWallet = new SavingsWallet();
         this.populate(savingsWallet, dto);
         savingsWallet.setEnabled(true);
+        savingsWallet.setUser(currentUser());
         SavingsWallet saved = savingsWalletRepository.save(savingsWallet);
         log.debug("SavingsWallet with id {} created successfully", saved.getId());
         return modelMapper.map(saved, SavingsWalletDTO.class);
@@ -60,7 +64,7 @@ public class SavingsWalletService implements ISavingsWalletService {
     @Override
     public Page<SavingsWalletDTO> list(SavingsWalletFilterDTO filters, Pageable pageable) {
         log.debug("Listing all savings wallets");
-        Specification<SavingsWallet> spec = SavingsWalletEspecification.withFilters(filters);
+        Specification<SavingsWallet> spec = SavingsWalletEspecification.withFilters(filters, currentUser());
         return savingsWalletRepository.findAll(spec, pageable)
                 .map(savingsWallet -> modelMapper.map(savingsWallet, SavingsWalletDTO.class));
     }
@@ -105,7 +109,11 @@ public class SavingsWalletService implements ISavingsWalletService {
     }
 
     protected SavingsWallet find(Long id) throws ChangeSetPersister.NotFoundException {
-        return savingsWalletRepository.findById(id)
+        return savingsWalletRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }
