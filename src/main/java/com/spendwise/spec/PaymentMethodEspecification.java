@@ -3,6 +3,7 @@ package com.spendwise.spec;
 import com.spendwise.dto.PaymentMethodFilterDTO;
 import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.model.user.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -11,9 +12,10 @@ import java.util.List;
 
 public class PaymentMethodEspecification {
 
-    public static Specification<PaymentMethod> withFilters(PaymentMethodFilterDTO filters) {
+    public static Specification<PaymentMethod> withFilters(PaymentMethodFilterDTO filters, User user) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user"), user));
 
             // Corregido: buscar por "name" en lugar de "description"
             if (filters.getName() != null && !filters.getName().isEmpty()) {

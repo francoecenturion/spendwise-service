@@ -1,6 +1,7 @@
 package com.spendwise.model;
 
 import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.model.user.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,4 +31,8 @@ public class PaymentMethod extends BaseEntity {
 
     @Column(name = "BRAND")
     private String brand;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
 }

@@ -2,6 +2,7 @@ package com.spendwise.spec;
 
 import com.spendwise.dto.ExpenseFilterDTO;
 import com.spendwise.model.Expense;
+import com.spendwise.model.user.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -10,9 +11,10 @@ import java.util.List;
 
 public class ExpenseSpecification {
 
-    public static Specification<Expense> withFilters(ExpenseFilterDTO filters) {
+    public static Specification<Expense> withFilters(ExpenseFilterDTO filters, User user) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user"), user));
 
             // Filtro por descripción (búsqueda parcial, case-insensitive)
             if (filters.getDescription() != null && !filters.getDescription().isEmpty()) {

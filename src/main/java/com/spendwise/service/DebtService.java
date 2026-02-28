@@ -17,7 +17,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 @Service
 public class DebtService implements IDebtService {
@@ -55,6 +58,7 @@ public class DebtService implements IDebtService {
         Debt debt = new Debt();
         this.populate(debt, dto);
         debt.setCancelled(false);
+        debt.setUser(currentUser());
         Debt saved = debtRepository.save(debt);
         log.debug("Debt with id {} created successfully", saved.getId());
         return modelMapper.map(saved, DebtDTO.class);
@@ -71,7 +75,7 @@ public class DebtService implements IDebtService {
     @Override
     public Page<DebtDTO> list(DebtFilterDTO filters, Pageable pageable) {
         log.debug("Listing all debts");
-        Specification<Debt> spec = DebtSpecification.withFilters(filters);
+        Specification<Debt> spec = DebtSpecification.withFilters(filters, currentUser());
         return debtRepository.findAll(spec, pageable)
                 .map(debt -> modelMapper.map(debt, DebtDTO.class));
     }
@@ -116,8 +120,12 @@ public class DebtService implements IDebtService {
     }
 
     protected Debt find(Long id) throws ChangeSetPersister.NotFoundException {
-        return debtRepository.findById(id)
+        return debtRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
 }
