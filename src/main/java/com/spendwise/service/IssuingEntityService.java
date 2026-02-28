@@ -15,7 +15,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 @Service
 public class IssuingEntityService implements IIssuingEntityService {
@@ -41,6 +44,7 @@ public class IssuingEntityService implements IIssuingEntityService {
         IssuingEntity issuingEntity = new IssuingEntity();
         this.populate(issuingEntity, dto);
         issuingEntity.setEnabled(true);
+        issuingEntity.setUser(currentUser());
         IssuingEntity saved = issuingEntityRepository.save(issuingEntity);
         log.debug("IssuingEntity with id {} created successfully", saved.getId());
         return modelMapper.map(saved, IssuingEntityDTO.class);
@@ -57,7 +61,7 @@ public class IssuingEntityService implements IIssuingEntityService {
     @Override
     public Page<IssuingEntityDTO> list(IssuingEntityFilterDTO filters, Pageable pageable) {
         log.debug("Listing all issuing entities");
-        Specification<IssuingEntity> spec = IssuingEntityEspecification.withFilters(filters);
+        Specification<IssuingEntity> spec = IssuingEntityEspecification.withFilters(filters, currentUser());
         return issuingEntityRepository.findAll(spec, pageable)
                 .map(entity -> modelMapper.map(entity, IssuingEntityDTO.class));
     }
@@ -102,8 +106,12 @@ public class IssuingEntityService implements IIssuingEntityService {
     }
 
     protected IssuingEntity find(Long id) throws ChangeSetPersister.NotFoundException {
-        return issuingEntityRepository.findById(id)
+        return issuingEntityRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
 }

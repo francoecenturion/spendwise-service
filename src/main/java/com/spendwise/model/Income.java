@@ -1,5 +1,6 @@
 package com.spendwise.model;
 
+import com.spendwise.model.user.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,5 +29,9 @@ public class Income extends BaseEntity {
 
     @Column(name = "DATE")
     private LocalDate date;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
 
 }

@@ -21,7 +21,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -78,6 +81,7 @@ public class SavingService implements ISavingService {
     public SavingDTO create(SavingDTO dto) {
         Saving category = new Saving();
         this.populate(category, dto);
+        category.setUser(currentUser());
         Saving savedSaving = savingRespository.save(category);
         log.debug("Saving with id {} created successfully", savedSaving.getId());
         return modelMapper.map(savedSaving, SavingDTO.class);
@@ -94,7 +98,7 @@ public class SavingService implements ISavingService {
     @Override
     public Page<SavingDTO> list(SavingFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
-        Specification<Saving> spec = SavingSpecification.withFilters(filters);
+        Specification<Saving> spec = SavingSpecification.withFilters(filters, currentUser());
         return savingRespository.findAll(spec, pageable)
                 .map(category -> modelMapper.map(category, SavingDTO.class));
     }
@@ -125,8 +129,12 @@ public class SavingService implements ISavingService {
 
 
     protected Saving find(Long id) throws ChangeSetPersister.NotFoundException {
-        return savingRespository.findById(id)
+        return savingRespository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {
