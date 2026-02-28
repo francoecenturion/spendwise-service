@@ -21,7 +21,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -62,6 +65,7 @@ public class IncomeService implements IIncomeService {
     public IncomeDTO create(IncomeDTO dto) {
         Income income = new Income();
         this.populate(income, dto);
+        income.setUser(currentUser());
         Income savedIncome = incomeRepository.save(income);
         log.debug("Income with id {} created successfully", savedIncome.getId());
         return modelMapper.map(savedIncome, IncomeDTO.class);
@@ -78,7 +82,7 @@ public class IncomeService implements IIncomeService {
     @Override
     public Page<IncomeDTO> list(IncomeFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
-        Specification<Income> spec = IncomeSpecification.withFilters(filters);
+        Specification<Income> spec = IncomeSpecification.withFilters(filters, currentUser());
         return incomeRepository.findAll(spec, pageable)
                 .map(income -> modelMapper.map(income, IncomeDTO.class));
     }
@@ -109,8 +113,12 @@ public class IncomeService implements IIncomeService {
 
 
     protected Income find(Long id) throws ChangeSetPersister.NotFoundException {
-        return incomeRepository.findById(id)
+        return incomeRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {

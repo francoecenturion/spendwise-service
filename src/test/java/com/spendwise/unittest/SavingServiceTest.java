@@ -10,10 +10,15 @@ import com.spendwise.model.Currency;
 import com.spendwise.model.Saving;
 import com.spendwise.repository.SavingRepository;
 import com.spendwise.service.SavingService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -55,6 +60,25 @@ public class SavingServiceTest {
 
     @InjectMocks
     private SavingService savingService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     private static Currency currency;
 
@@ -154,7 +178,7 @@ public class SavingServiceTest {
         saving.setCurrency(currency);
         saving.setDate(LocalDate.of(2024, 1, 10));
 
-        Mockito.when(savingRespository.findById(id)).thenReturn(Optional.of(saving));
+        Mockito.when(savingRespository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(saving));
 
         // Act
         SavingDTO result = savingService.findById(id);
@@ -162,7 +186,7 @@ public class SavingServiceTest {
         // Assert
         assertEquals(id, result.getId());
         assertEquals("Ahorro enero", result.getDescription());
-        Mockito.verify(savingRespository).findById(id);
+        Mockito.verify(savingRespository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(savingRespository);
     }
 
@@ -171,7 +195,7 @@ public class SavingServiceTest {
     public void testFindByIdNotFound() {
         // Arrange
         Long id = 99L;
-        Mockito.when(savingRespository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(savingRespository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ChangeSetPersister.NotFoundException.class,
@@ -502,7 +526,7 @@ public class SavingServiceTest {
         DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
         historicalDTO.setSellingPrice(sellingPrice);
 
-        Mockito.when(savingRespository.findById(id)).thenReturn(Optional.of(existing));
+        Mockito.when(savingRespository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existing));
         Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString()))
                 .thenReturn(historicalDTO);
         Mockito.when(savingRespository.save(any(Saving.class)))
@@ -515,7 +539,7 @@ public class SavingServiceTest {
         assertEquals("Ahorro actualizado", result.getDescription());
         assertEquals(newAmount, result.getAmountInPesos());
         assertEquals(expectedDollars, result.getAmountInDollars());
-        Mockito.verify(savingRespository).findById(id);
+        Mockito.verify(savingRespository).findByIdAndUser(id, testUser);
         Mockito.verify(savingRespository).save(any(Saving.class));
     }
 
@@ -535,14 +559,14 @@ public class SavingServiceTest {
         saving.setCurrency(currency);
         saving.setDate(LocalDate.of(2024, 1, 10));
 
-        Mockito.when(savingRespository.findById(id)).thenReturn(Optional.of(saving));
+        Mockito.when(savingRespository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(saving));
 
         // Act
         SavingDTO result = savingService.delete(id);
 
         // Assert
         assertEquals("Ahorro a eliminar", result.getDescription());
-        Mockito.verify(savingRespository).findById(id);
+        Mockito.verify(savingRespository).findByIdAndUser(id, testUser);
         Mockito.verify(savingRespository).delete(saving);
         Mockito.verifyNoMoreInteractions(savingRespository);
     }

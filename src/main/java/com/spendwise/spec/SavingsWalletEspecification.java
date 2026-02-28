@@ -3,6 +3,7 @@ package com.spendwise.spec;
 import com.spendwise.dto.SavingsWalletFilterDTO;
 import com.spendwise.enums.SavingsWalletType;
 import com.spendwise.model.SavingsWallet;
+import com.spendwise.model.user.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -11,9 +12,10 @@ import java.util.List;
 
 public class SavingsWalletEspecification {
 
-    public static Specification<SavingsWallet> withFilters(SavingsWalletFilterDTO filters) {
+    public static Specification<SavingsWallet> withFilters(SavingsWalletFilterDTO filters, User user) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user"), user));
 
             if (filters.getName() != null && !filters.getName().isEmpty()) {
                 predicates.add(cb.like(cb.lower(root.get("name")),
