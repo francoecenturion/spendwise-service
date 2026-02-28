@@ -2,6 +2,7 @@ package com.spendwise.spec;
 
 import com.spendwise.dto.IncomeFilterDTO;
 import com.spendwise.model.Income;
+import com.spendwise.model.user.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -10,9 +11,10 @@ import java.util.List;
 
 public class IncomeSpecification {
 
-    public static Specification<Income> withFilters(IncomeFilterDTO filters) {
+    public static Specification<Income> withFilters(IncomeFilterDTO filters, User user) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user"), user));
 
             if (filters.getId() != null) {
                 predicates.add(cb.equal(root.get("id"), filters.getId()));

@@ -5,9 +5,14 @@ import com.spendwise.dto.IssuingEntityFilterDTO;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.service.IssuingEntityService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -41,6 +46,25 @@ public class IssuingEntityServiceTest {
     @InjectMocks
     private IssuingEntityService issuingEntityService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("Create issuing entity saves a new entity successfully")
     public void testCreate() {
@@ -52,6 +76,7 @@ public class IssuingEntityServiceTest {
 
         IssuingEntityDTO expected = dto;
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
+        entity.setUser(testUser);
 
         // Act
         Mockito.when(issuingEntityRepository.save(entity)).thenReturn(entity);
@@ -79,12 +104,12 @@ public class IssuingEntityServiceTest {
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
 
         // Act
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.of(entity));
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         IssuingEntityDTO obtained = issuingEntityService.findById(id);
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(issuingEntityRepository).findById(id);
+        Mockito.verify(issuingEntityRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }
 
@@ -96,7 +121,7 @@ public class IssuingEntityServiceTest {
         Long id = 1L;
 
         // Act & Assert
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> issuingEntityService.findById(id));
     }
@@ -325,7 +350,7 @@ public class IssuingEntityServiceTest {
         IssuingEntityDTO expected = newDto;
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
 
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.of(entity));
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -333,7 +358,7 @@ public class IssuingEntityServiceTest {
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(issuingEntityRepository).findById(id);
+        Mockito.verify(issuingEntityRepository).findByIdAndUser(id, testUser);
         Mockito.verify(issuingEntityRepository).save(entity);
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }
@@ -353,12 +378,12 @@ public class IssuingEntityServiceTest {
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
 
         // Act
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.of(entity));
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         IssuingEntityDTO deleted = issuingEntityService.delete(id);
 
         // Assert
         assertEquals(expected, deleted);
-        Mockito.verify(issuingEntityRepository).findById(id);
+        Mockito.verify(issuingEntityRepository).findByIdAndUser(id, testUser);
         Mockito.verify(issuingEntityRepository).delete(entity);
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }
@@ -375,7 +400,7 @@ public class IssuingEntityServiceTest {
         dto.setEnabled(true);
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
 
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.of(entity));
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -383,7 +408,7 @@ public class IssuingEntityServiceTest {
 
         // Assert
         assertFalse(obtained.getEnabled());
-        Mockito.verify(issuingEntityRepository).findById(id);
+        Mockito.verify(issuingEntityRepository).findByIdAndUser(id, testUser);
         Mockito.verify(issuingEntityRepository).save(entity);
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }
@@ -400,7 +425,7 @@ public class IssuingEntityServiceTest {
         dto.setEnabled(false);
         IssuingEntity entity = modelMapper.map(dto, IssuingEntity.class);
 
-        Mockito.when(issuingEntityRepository.findById(id)).thenReturn(Optional.of(entity));
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -408,7 +433,7 @@ public class IssuingEntityServiceTest {
 
         // Assert
         assertTrue(obtained.getEnabled());
-        Mockito.verify(issuingEntityRepository).findById(id);
+        Mockito.verify(issuingEntityRepository).findByIdAndUser(id, testUser);
         Mockito.verify(issuingEntityRepository).save(entity);
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }

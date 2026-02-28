@@ -1,10 +1,8 @@
 package com.spendwise.model;
 
 import com.spendwise.enums.SavingsWalletType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
+import com.spendwise.model.user.User;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -26,4 +24,8 @@ public class SavingsWallet extends BaseEntity {
 
     @Column(name = "ICON")
     private String icon;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
 }

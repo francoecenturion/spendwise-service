@@ -6,9 +6,14 @@ import com.spendwise.enums.CategoryType;
 import com.spendwise.model.Category;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.service.CategoryService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -42,6 +47,25 @@ public class CategoryServiceTest {
     @InjectMocks
     private CategoryService categoryService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("Create category saves a new category successfully")
     public void testCreate() {
@@ -54,6 +78,7 @@ public class CategoryServiceTest {
 
         CategoryDTO expected = categoryDTO;
         Category category = modelMapper.map(categoryDTO, Category.class);
+        category.setUser(testUser);
 
         // Act
         Mockito.when(categoryRepository.save(category)).thenReturn(category);
@@ -82,12 +107,12 @@ public class CategoryServiceTest {
         Category category = modelMapper.map(categoryDTO, Category.class);
 
         // Act
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(category));
         CategoryDTO obtained = categoryService.findById(id);
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(categoryRepository);
     }
 
@@ -99,7 +124,7 @@ public class CategoryServiceTest {
         Long id = 1L;
 
         // Act & Assert
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> categoryService.findById(id));
     }
@@ -163,7 +188,7 @@ public class CategoryServiceTest {
         CategoryDTO expected = newCategoryDTO;
         Category category = modelMapper.map(categoryDTO, Category.class);
 
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(category));
         Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -171,7 +196,7 @@ public class CategoryServiceTest {
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).findByIdAndUser(id, testUser);
         Mockito.verify(categoryRepository).save(category);
         Mockito.verifyNoMoreInteractions(categoryRepository);
     }
@@ -537,12 +562,12 @@ public class CategoryServiceTest {
         Category category = modelMapper.map(categoryDTO, Category.class);
 
         // Act
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(category));
         CategoryDTO deleted = categoryService.delete(id);
 
         // Assert
         assertEquals(expected, deleted);
-        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).findByIdAndUser(id, testUser);
         Mockito.verify(categoryRepository).delete(category);
         Mockito.verifyNoMoreInteractions(categoryRepository);
     }
@@ -560,7 +585,7 @@ public class CategoryServiceTest {
         categoryDTO.setEnabled(true);
         Category category = modelMapper.map(categoryDTO, Category.class);
 
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(category));
         Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -568,7 +593,7 @@ public class CategoryServiceTest {
 
         // Assert
         assertFalse(obtained.getEnabled());
-        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).findByIdAndUser(id, testUser);
         Mockito.verify(categoryRepository).save(category);
         Mockito.verifyNoMoreInteractions(categoryRepository);
     }
@@ -586,7 +611,7 @@ public class CategoryServiceTest {
         categoryDTO.setEnabled(false);
         Category category = modelMapper.map(categoryDTO, Category.class);
 
-        Mockito.when(categoryRepository.findById(id)).thenReturn(Optional.of(category));
+        Mockito.when(categoryRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(category));
         Mockito.when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -594,7 +619,7 @@ public class CategoryServiceTest {
 
         // Assert
         assertTrue(obtained.getEnabled());
-        Mockito.verify(categoryRepository).findById(id);
+        Mockito.verify(categoryRepository).findByIdAndUser(id, testUser);
         Mockito.verify(categoryRepository).save(category);
         Mockito.verifyNoMoreInteractions(categoryRepository);
     }

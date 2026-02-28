@@ -15,8 +15,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.spendwise.model.user.User;
 
 @Service
 public class CategoryService implements ICategoryService {
@@ -43,6 +45,7 @@ public class CategoryService implements ICategoryService {
         Category category = new Category();
         this.populate(category, dto);
         category.setEnabled(true);
+        category.setUser(currentUser());
         Category savedCategory = categoryRepository.save(category);
         log.debug("Category with id {} created successfully", savedCategory.getId());
         return modelMapper.map(savedCategory, CategoryDTO.class);
@@ -60,7 +63,7 @@ public class CategoryService implements ICategoryService {
     public Page<CategoryDTO> list(CategoryFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
 
-        Specification<Category> spec = CategoryEspecification.withFilters(filters);
+        Specification<Category> spec = CategoryEspecification.withFilters(filters, currentUser());
 
         return categoryRepository.findAll(spec, pageable)
                 .map(category -> modelMapper.map(category, CategoryDTO.class));
@@ -106,7 +109,11 @@ public class CategoryService implements ICategoryService {
     }
 
     protected Category find(Long id) throws ChangeSetPersister.NotFoundException {
-        return categoryRepository.findById(id)
+        return categoryRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }

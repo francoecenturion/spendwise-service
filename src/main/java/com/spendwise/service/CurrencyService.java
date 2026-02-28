@@ -15,7 +15,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 @Service
 public class CurrencyService implements ICurrencyService {
@@ -42,6 +45,7 @@ public class CurrencyService implements ICurrencyService {
         Currency currency = new Currency();
         this.populate(currency, dto);
         currency.setEnabled(true);
+        currency.setUser(currentUser());
         Currency savedCurrency = currencyRepository.save(currency);
         log.debug("Currency with id {} created successfully", savedCurrency.getId());
         return modelMapper.map(savedCurrency, CurrencyDTO.class);
@@ -59,7 +63,7 @@ public class CurrencyService implements ICurrencyService {
     public Page<CurrencyDTO> list(CurrencyFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
 
-        Specification<Currency> spec = CurrencyEspecification.withFilters(filters);
+        Specification<Currency> spec = CurrencyEspecification.withFilters(filters, currentUser());
 
         return currencyRepository.findAll(spec, pageable)
                 .map(currency -> modelMapper.map(currency, CurrencyDTO.class));
@@ -105,7 +109,11 @@ public class CurrencyService implements ICurrencyService {
     }
 
     protected Currency find(Long id) throws ChangeSetPersister.NotFoundException {
-        return currencyRepository.findById(id)
+        return currencyRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }
