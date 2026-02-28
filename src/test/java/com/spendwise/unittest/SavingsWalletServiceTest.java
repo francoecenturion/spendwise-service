@@ -6,9 +6,14 @@ import com.spendwise.enums.SavingsWalletType;
 import com.spendwise.model.SavingsWallet;
 import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.service.SavingsWalletService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -41,6 +46,25 @@ public class SavingsWalletServiceTest {
 
     @InjectMocks
     private SavingsWalletService savingsWalletService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // CREATE
@@ -89,7 +113,7 @@ public class SavingsWalletServiceTest {
         wallet.setSavingsWalletType(SavingsWalletType.VIRTUAL_WALLET);
         wallet.setEnabled(true);
 
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.of(wallet));
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(wallet));
 
         // Act
         SavingsWalletDTO result = savingsWalletService.findById(id);
@@ -97,7 +121,7 @@ public class SavingsWalletServiceTest {
         // Assert
         assertEquals(id, result.getId());
         assertEquals("Mercado Pago", result.getName());
-        Mockito.verify(savingsWalletRepository).findById(id);
+        Mockito.verify(savingsWalletRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(savingsWalletRepository);
     }
 
@@ -106,7 +130,7 @@ public class SavingsWalletServiceTest {
     public void testFindByIdNotFound() {
         // Arrange
         Long id = 99L;
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ChangeSetPersister.NotFoundException.class,
@@ -358,7 +382,7 @@ public class SavingsWalletServiceTest {
         updateDTO.setSavingsWalletType("BANK_ACCOUNT");
         updateDTO.setEnabled(true);
 
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.of(existing));
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existing));
         Mockito.when(savingsWalletRepository.save(any(SavingsWallet.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -366,7 +390,7 @@ public class SavingsWalletServiceTest {
 
         // Assert
         assertEquals("Cuenta Galicia Dólares", result.getName());
-        Mockito.verify(savingsWalletRepository).findById(id);
+        Mockito.verify(savingsWalletRepository).findByIdAndUser(id, testUser);
         Mockito.verify(savingsWalletRepository).save(existing);
         Mockito.verifyNoMoreInteractions(savingsWalletRepository);
     }
@@ -386,14 +410,14 @@ public class SavingsWalletServiceTest {
         wallet.setSavingsWalletType(SavingsWalletType.CASH);
         wallet.setEnabled(true);
 
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.of(wallet));
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(wallet));
 
         // Act
         SavingsWalletDTO result = savingsWalletService.delete(id);
 
         // Assert
         assertEquals("Cuenta a Eliminar", result.getName());
-        Mockito.verify(savingsWalletRepository).findById(id);
+        Mockito.verify(savingsWalletRepository).findByIdAndUser(id, testUser);
         Mockito.verify(savingsWalletRepository).delete(wallet);
         Mockito.verifyNoMoreInteractions(savingsWalletRepository);
     }
@@ -413,7 +437,7 @@ public class SavingsWalletServiceTest {
         wallet.setSavingsWalletType(SavingsWalletType.FIXED_TERM);
         wallet.setEnabled(true);
 
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.of(wallet));
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(wallet));
         Mockito.when(savingsWalletRepository.save(any(SavingsWallet.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -421,7 +445,7 @@ public class SavingsWalletServiceTest {
 
         // Assert
         assertFalse(result.getEnabled());
-        Mockito.verify(savingsWalletRepository).findById(id);
+        Mockito.verify(savingsWalletRepository).findByIdAndUser(id, testUser);
         Mockito.verify(savingsWalletRepository).save(wallet);
         Mockito.verifyNoMoreInteractions(savingsWalletRepository);
     }
@@ -437,7 +461,7 @@ public class SavingsWalletServiceTest {
         wallet.setSavingsWalletType(SavingsWalletType.FIXED_TERM);
         wallet.setEnabled(false);
 
-        Mockito.when(savingsWalletRepository.findById(id)).thenReturn(Optional.of(wallet));
+        Mockito.when(savingsWalletRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(wallet));
         Mockito.when(savingsWalletRepository.save(any(SavingsWallet.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -445,7 +469,7 @@ public class SavingsWalletServiceTest {
 
         // Assert
         assertTrue(result.getEnabled());
-        Mockito.verify(savingsWalletRepository).findById(id);
+        Mockito.verify(savingsWalletRepository).findByIdAndUser(id, testUser);
         Mockito.verify(savingsWalletRepository).save(wallet);
         Mockito.verifyNoMoreInteractions(savingsWalletRepository);
     }

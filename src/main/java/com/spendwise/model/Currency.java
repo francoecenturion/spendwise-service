@@ -1,10 +1,9 @@
 package com.spendwise.model;
 
+import com.spendwise.model.user.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.math.BigDecimal;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -20,5 +19,9 @@ public class Currency extends BaseEntity {
 
     @Column(name = "ENABLED")
     private Boolean enabled;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
 
 }

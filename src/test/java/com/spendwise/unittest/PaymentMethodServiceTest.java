@@ -9,9 +9,14 @@ import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.PaymentMethodService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -48,6 +53,25 @@ public class PaymentMethodServiceTest {
     @InjectMocks
     private PaymentMethodService paymentMethodService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("Create payment method saves a new paymentMethod successfully")
     public void testCreate() {
@@ -60,6 +84,7 @@ public class PaymentMethodServiceTest {
 
         PaymentMethodDTO expected = paymentMethodDTO;
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+        paymentMethod.setUser(testUser);
 
         // Act
         Mockito.when(paymentMethodRepository.save(paymentMethod)).thenReturn(paymentMethod);
@@ -130,12 +155,12 @@ public class PaymentMethodServiceTest {
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
         // Act
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
         PaymentMethodDTO obtained = paymentMethodService.findById(id);
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);
     }
 
@@ -147,7 +172,7 @@ public class PaymentMethodServiceTest {
         Long id = 1L;
 
         // Act & Assert
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> paymentMethodService.findById(id));
 
@@ -484,7 +509,7 @@ public class PaymentMethodServiceTest {
         PaymentMethodDTO expected = newPaymentMethodDTO;
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
         Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -492,7 +517,7 @@ public class PaymentMethodServiceTest {
 
         // Assert
         assertEquals(expected, obtained);
-        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
         Mockito.verify(paymentMethodRepository).save(paymentMethod);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);
 
@@ -514,12 +539,12 @@ public class PaymentMethodServiceTest {
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
         // Act
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
         PaymentMethodDTO deleted = paymentMethodService.delete(id);
 
         // Assert
         assertEquals(expected, deleted);
-        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
         Mockito.verify(paymentMethodRepository).delete(paymentMethod);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);
     }
@@ -537,7 +562,7 @@ public class PaymentMethodServiceTest {
         paymentMethodDTO.setEnabled(true);
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
         Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -545,7 +570,7 @@ public class PaymentMethodServiceTest {
 
         // Assert
         assertFalse(obtained.getEnabled());
-        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
         Mockito.verify(paymentMethodRepository).save(paymentMethod);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);
 
@@ -564,7 +589,7 @@ public class PaymentMethodServiceTest {
         paymentMethodDTO.setEnabled(false);
         PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
-        Mockito.when(paymentMethodRepository.findById(id)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
         Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -572,7 +597,7 @@ public class PaymentMethodServiceTest {
 
         // Assert
         assertTrue(obtained.getEnabled());
-        Mockito.verify(paymentMethodRepository).findById(id);
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
         Mockito.verify(paymentMethodRepository).save(paymentMethod);
         Mockito.verifyNoMoreInteractions(paymentMethodRepository);
 

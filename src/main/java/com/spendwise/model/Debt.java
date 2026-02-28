@@ -1,5 +1,6 @@
 package com.spendwise.model;
 
+import com.spendwise.model.user.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -44,5 +45,9 @@ public class Debt extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "PAYMENT_METHOD_ID")
     private PaymentMethod paymentMethod;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
 
 }

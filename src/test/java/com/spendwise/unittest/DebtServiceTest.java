@@ -10,10 +10,15 @@ import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.DebtRepository;
 import com.spendwise.service.DebtService;
+import com.spendwise.model.user.User;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -48,6 +53,25 @@ public class DebtServiceTest {
 
     @InjectMocks
     private DebtService debtService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setName("Test");
+        testUser.setEnabled(true);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(testUser, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     private static IssuingEntity issuingEntity;
     private static PaymentMethod paymentMethod;
@@ -155,14 +179,14 @@ public class DebtServiceTest {
         debt.setCancelled(false);
 
         // Act
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.of(debt));
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(debt));
         DebtDTO result = debtService.findById(id);
 
         // Assert
         assertNotNull(result);
         assertEquals(id, result.getId());
         assertEquals("Deuda con Juan", result.getDescription());
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verifyNoMoreInteractions(debtRepository);
     }
 
@@ -173,10 +197,10 @@ public class DebtServiceTest {
         Long id = 999L;
 
         // Act & Assert
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.empty());
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.empty());
         assertThrows(ChangeSetPersister.NotFoundException.class,
                 () -> debtService.findById(id));
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
     }
 
     @Test
@@ -435,7 +459,7 @@ public class DebtServiceTest {
         updateDTO.setCreditor("Juan Pérez");
 
         // Act
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.of(existing));
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existing));
         Mockito.when(debtRepository.save(any(Debt.class))).thenAnswer(inv -> inv.getArgument(0));
 
         DebtDTO result = debtService.update(id, updateDTO);
@@ -444,7 +468,7 @@ public class DebtServiceTest {
         assertNotNull(result);
         assertEquals("Deuda actualizada", result.getDescription());
         assertEquals(BigDecimal.valueOf(6000), result.getAmountInPesos());
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verify(debtRepository).save(any(Debt.class));
         Mockito.verifyNoMoreInteractions(debtRepository);
     }
@@ -465,13 +489,13 @@ public class DebtServiceTest {
         debt.setCancelled(false);
 
         // Act
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.of(debt));
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(debt));
         DebtDTO result = debtService.delete(id);
 
         // Assert
         assertNotNull(result);
         assertEquals(id, result.getId());
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verify(debtRepository).delete(debt);
         Mockito.verifyNoMoreInteractions(debtRepository);
     }
@@ -491,7 +515,7 @@ public class DebtServiceTest {
         debt.setCreditor("Juan");
         debt.setCancelled(false);
 
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.of(debt));
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(debt));
         Mockito.when(debtRepository.save(any(Debt.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -499,7 +523,7 @@ public class DebtServiceTest {
 
         // Assert
         assertTrue(result.getCancelled());
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verify(debtRepository).save(debt);
         Mockito.verifyNoMoreInteractions(debtRepository);
     }
@@ -519,7 +543,7 @@ public class DebtServiceTest {
         debt.setCreditor("Juan");
         debt.setCancelled(true);
 
-        Mockito.when(debtRepository.findById(id)).thenReturn(Optional.of(debt));
+        Mockito.when(debtRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(debt));
         Mockito.when(debtRepository.save(any(Debt.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -527,7 +551,7 @@ public class DebtServiceTest {
 
         // Assert
         assertFalse(result.getCancelled());
-        Mockito.verify(debtRepository).findById(id);
+        Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verify(debtRepository).save(debt);
         Mockito.verifyNoMoreInteractions(debtRepository);
     }

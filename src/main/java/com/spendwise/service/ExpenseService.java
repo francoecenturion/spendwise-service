@@ -22,7 +22,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -85,6 +88,7 @@ public class ExpenseService implements IExpenseService {
     public ExpenseDTO create(ExpenseDTO dto) {
         Expense category = new Expense();
         this.populate(category, dto);
+        category.setUser(currentUser());
         Expense savedExpense = expenseRespository.save(category);
         log.debug("Expense with id {} created successfully", savedExpense.getId());
         return modelMapper.map(savedExpense, ExpenseDTO.class);
@@ -101,7 +105,7 @@ public class ExpenseService implements IExpenseService {
     @Override
     public Page<ExpenseDTO> list(ExpenseFilterDTO filters, Pageable pageable) {
         log.debug("Listing all categories");
-        Specification<Expense> spec = ExpenseSpecification.withFilters(filters);
+        Specification<Expense> spec = ExpenseSpecification.withFilters(filters, currentUser());
         return expenseRespository.findAll(spec, pageable)
                 .map(category -> modelMapper.map(category, ExpenseDTO.class));
     }
@@ -132,8 +136,12 @@ public class ExpenseService implements IExpenseService {
 
 
     protected Expense find(Long id) throws ChangeSetPersister.NotFoundException {
-        return expenseRespository.findById(id)
+        return expenseRespository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {

@@ -18,7 +18,10 @@ import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import com.spendwise.model.user.User;
 
 @Service
 public class PaymentMethodService implements IPaymentMethodService {
@@ -58,6 +61,7 @@ public class PaymentMethodService implements IPaymentMethodService {
         PaymentMethod paymentMethod = new PaymentMethod();
         this.populate(paymentMethod, dto);
         paymentMethod.setEnabled(true);
+        paymentMethod.setUser(currentUser());
         PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
         log.debug("PaymentMethod with id {} created successfully", savedPaymentMethod.getId());
         return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
@@ -74,7 +78,7 @@ public class PaymentMethodService implements IPaymentMethodService {
     @Override
     public Page<PaymentMethodDTO> list(PaymentMethodFilterDTO filters, Pageable pageable) {
         log.debug("Listing all payment methods");
-        Specification<PaymentMethod> spec = PaymentMethodEspecification.withFilters(filters);
+        Specification<PaymentMethod> spec = PaymentMethodEspecification.withFilters(filters, currentUser());
         return paymentMethodRepository.findAll(spec, pageable)
                 .map(paymentMethod -> modelMapper.map(paymentMethod, PaymentMethodDTO.class));
     }
@@ -119,7 +123,11 @@ public class PaymentMethodService implements IPaymentMethodService {
     }
 
     protected PaymentMethod find(Long id) throws ChangeSetPersister.NotFoundException {
-        return paymentMethodRepository.findById(id)
+        return paymentMethodRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }
