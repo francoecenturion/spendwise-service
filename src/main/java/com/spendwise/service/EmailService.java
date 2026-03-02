@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +23,7 @@ public class EmailService implements IEmailService {
         this.mailSender = mailSender;
     }
 
+    @Async
     @Override
     public void sendVerificationEmail(String toEmail, String name, String verificationLink) {
         SimpleMailMessage message = new SimpleMailMessage();
