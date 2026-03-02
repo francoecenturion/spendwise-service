@@ -24,5 +24,12 @@ public class RestClientConfig {
                 .build();
     }
 
+    @Bean("resendRestClient")
+    public RestClient resend() {
+        return RestClient.builder()
+                .baseUrl("https://api.resend.com")
+                .build();
+    }
+
 }
 

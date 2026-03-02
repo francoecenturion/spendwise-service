@@ -3,6 +3,7 @@ package com.spendwise.service;
 import com.spendwise.service.interfaces.IEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,8 @@ public class EmailService implements IEmailService {
     @Value("${resend.from:SpendWise <onboarding@resend.dev>}")
     private String fromAddress;
 
-    public EmailService() {
-        this.restClient = RestClient.create("https://api.resend.com");
+    public EmailService(@Qualifier("resendRestClient") RestClient resendClient) {
+        this.restClient = resendClient;
     }
 
     @Async
