@@ -4,33 +4,38 @@ import com.spendwise.service.interfaces.IEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class EmailService implements IEmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-    private final JavaMailSender mailSender;
+    private final RestClient restClient;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    @Value("${resend.api-key}")
+    private String apiKey;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    @Value("${resend.from:SpendWise <onboarding@resend.dev>}")
+    private String fromAddress;
+
+    public EmailService() {
+        this.restClient = RestClient.create("https://api.resend.com");
     }
 
     @Async
     @Override
     public void sendVerificationEmail(String toEmail, String name, String verificationLink) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(toEmail);
-        message.setSubject("SpendWise — Verify your email address");
-        message.setText(
+        Map<String, Object> body = Map.of(
+                "from", fromAddress,
+                "to", List.of(toEmail),
+                "subject", "SpendWise — Verify your email address",
+                "text",
                 "Hi " + name + ",\n\n" +
                 "Thanks for registering at SpendWise! Please verify your email address by clicking the link below:\n\n" +
                 verificationLink + "\n\n" +
@@ -39,7 +44,17 @@ public class EmailService implements IEmailService {
                 "— The SpendWise Team"
         );
 
-        mailSender.send(message);
-        log.debug("Verification email sent to {}", toEmail);
+        try {
+            restClient.post()
+                    .uri("/emails")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.debug("Verification email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage());
+        }
     }
 }
