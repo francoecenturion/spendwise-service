@@ -1,6 +1,6 @@
 package com.spendwise.security;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import com.spendwise.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

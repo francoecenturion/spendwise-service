@@ -5,7 +5,7 @@ import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
 import com.spendwise.dto.auth.UpdateProfileDTO;
 import com.spendwise.model.auth.VerificationToken;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
@@ -427,6 +427,82 @@ public class AuthServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         Mockito.verify(userRepository).findById(1L);
         Mockito.verifyNoMoreInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("updateProfile with newPassword and correct currentPassword hashes and saves the new password")
+    public void testUpdateProfile_changePassword() {
+
+        // Arrange
+        User user = buildUser(1L, "john@example.com", "John", true);
+        setSecurityContext(user);
+
+        UpdateProfileDTO dto = new UpdateProfileDTO();
+        dto.setCurrentPassword("rawCurrentPassword");
+        dto.setNewPassword("newSecurePass");
+
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        Mockito.when(passwordEncoder.matches("rawCurrentPassword", "$2a$10$hashedPassword")).thenReturn(true);
+        Mockito.when(passwordEncoder.encode("newSecurePass")).thenReturn("$2a$10$newHashedPassword");
+        Mockito.when(userRepository.save(user)).thenReturn(user);
+
+        // Act
+        authService.updateProfile(dto);
+
+        // Assert
+        assertEquals("$2a$10$newHashedPassword", user.getPasswordHash());
+        Mockito.verify(userRepository).findById(1L);
+        Mockito.verify(passwordEncoder).matches("rawCurrentPassword", "$2a$10$hashedPassword");
+        Mockito.verify(passwordEncoder).encode("newSecurePass");
+        Mockito.verify(userRepository).save(user);
+        Mockito.verifyNoMoreInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("updateProfile with wrong currentPassword throws BAD_REQUEST and does not save")
+    public void testUpdateProfile_wrongCurrentPassword() {
+
+        // Arrange
+        User user = buildUser(1L, "john@example.com", "John", true);
+        setSecurityContext(user);
+
+        UpdateProfileDTO dto = new UpdateProfileDTO();
+        dto.setCurrentPassword("wrongPassword");
+        dto.setNewPassword("newSecurePass");
+
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        Mockito.when(passwordEncoder.matches("wrongPassword", "$2a$10$hashedPassword")).thenReturn(false);
+
+        // Act & Assert
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.updateProfile(dto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        Mockito.verify(passwordEncoder).matches("wrongPassword", "$2a$10$hashedPassword");
+        Mockito.verify(userRepository, Mockito.never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("updateProfile with newPassword but null currentPassword throws BAD_REQUEST and does not save")
+    public void testUpdateProfile_missingCurrentPassword() {
+
+        // Arrange
+        User user = buildUser(1L, "john@example.com", "John", true);
+        setSecurityContext(user);
+
+        UpdateProfileDTO dto = new UpdateProfileDTO();
+        dto.setCurrentPassword(null);
+        dto.setNewPassword("newSecurePass");
+
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // Act & Assert
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.updateProfile(dto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        Mockito.verifyNoInteractions(passwordEncoder);
+        Mockito.verify(userRepository, Mockito.never()).save(any(User.class));
     }
 
     // ───────────────────────── deleteAccount ─────────────────────────────────

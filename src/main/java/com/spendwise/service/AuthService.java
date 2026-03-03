@@ -5,7 +5,7 @@ import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
 import com.spendwise.dto.auth.UpdateProfileDTO;
 import com.spendwise.model.auth.VerificationToken;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
@@ -157,6 +157,14 @@ public class AuthService implements IAuthService {
         if (dto.getName() != null) user.setName(dto.getName());
         if (dto.getSurname() != null) user.setSurname(dto.getSurname());
         if (dto.getProfilePicture() != null) user.setProfilePicture(dto.getProfilePicture());
+
+        if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
+            if (dto.getCurrentPassword() == null ||
+                    !passwordEncoder.matches(dto.getCurrentPassword(), user.getPasswordHash())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Contraseña actual incorrecta");
+            }
+            user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+        }
 
         User saved = userRepository.save(user);
         log.debug("Profile updated for user {}", saved.getEmail());

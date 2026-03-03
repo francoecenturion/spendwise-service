@@ -11,7 +11,7 @@ import com.spendwise.model.Category;
 import com.spendwise.model.Income;
 import com.spendwise.repository.IncomeRepository;
 import com.spendwise.service.IncomeService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

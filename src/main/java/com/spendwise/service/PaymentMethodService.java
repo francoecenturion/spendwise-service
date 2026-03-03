@@ -21,7 +21,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 
 @Service
 public class PaymentMethodService implements IPaymentMethodService {

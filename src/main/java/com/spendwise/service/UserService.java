@@ -2,7 +2,7 @@ package com.spendwise.service;
 
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.UserFilterDTO;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.service.interfaces.IUserService;
 import com.spendwise.spec.UserEspecification;

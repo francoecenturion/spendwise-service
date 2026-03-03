@@ -1,6 +1,6 @@
 package com.spendwise.unittest;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import com.spendwise.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

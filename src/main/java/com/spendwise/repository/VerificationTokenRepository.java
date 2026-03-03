@@ -1,7 +1,7 @@
 package com.spendwise.repository;
 
 import com.spendwise.model.auth.VerificationToken;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
