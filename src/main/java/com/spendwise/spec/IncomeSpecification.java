@@ -2,7 +2,7 @@ package com.spendwise.spec;
 
 import com.spendwise.dto.IncomeFilterDTO;
 import com.spendwise.model.Income;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 

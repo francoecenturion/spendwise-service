@@ -13,9 +13,13 @@ import com.spendwise.model.Category;
 import com.spendwise.model.Currency;
 import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.model.RecurrentExpense;
+import com.spendwise.model.RecurrentExpenseRecord;
 import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.RecurrentExpenseRecordRepository;
+import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.service.ExpenseService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +66,12 @@ public class ExpenseServiceTest {
 
     @Mock
     private DolarApiHistoricalClient dolarApiHistoricalClient;
+
+    @Mock
+    private RecurrentExpenseRepository recurrentExpenseRepository;
+
+    @Mock
+    private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
 
     @InjectMocks
     private ExpenseService expenseService;
@@ -779,5 +789,229 @@ public class ExpenseServiceTest {
         assertEquals(id, result.getId());
         Mockito.verify(expenseRepository).findByIdAndUser(id, testUser);
         Mockito.verify(expenseRepository).delete(expense);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // AUTO-CANCEL RECURRENT EXPENSE
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Create expense creates a new RecurrentExpenseRecord when description matches an enabled recurrent expense and no record exists for the current month")
+    public void testCreateAutoCancelsMatchingRecurrentExpenseWithNewRecord() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Alquiler");
+        dto.setInputAmount(new BigDecimal("100000"));
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.empty());
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Alquiler", result.getDescription());
+        Mockito.verify(recurrentExpenseRepository).findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser);
+        Mockito.verify(recurrentExpenseRecordRepository).findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear());
+        Mockito.verify(recurrentExpenseRecordRepository).save(any(RecurrentExpenseRecord.class));
+    }
+
+    @Test
+    @DisplayName("Create expense updates existing RecurrentExpenseRecord when one already exists for the current month")
+    public void testCreateAutoCancelsUpdatingExistingRecord() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("alquiler");
+        dto.setInputAmount(new BigDecimal("100000"));
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        RecurrentExpenseRecord existingRecord = new RecurrentExpenseRecord();
+        existingRecord.setId(5L);
+        existingRecord.setRecurrentExpense(recurrentExpense);
+        existingRecord.setMonth(today.getMonthValue());
+        existingRecord.setYear(today.getYear());
+        existingRecord.setCancelled(false);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.of(existingRecord));
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(existingRecord.getCancelled());
+        assertNotNull(existingRecord.getExpense());
+        Mockito.verify(recurrentExpenseRecordRepository).save(existingRecord);
+    }
+
+    @Test
+    @DisplayName("Create expense does not create a RecurrentExpenseRecord when description does not match any recurrent expense")
+    public void testCreateDoesNotCancelWhenNoMatchingRecurrentExpense() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Supermercado");
+        dto.setInputAmount(new BigDecimal("5000"));
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Supermercado", testUser))
+                .thenReturn(Optional.empty());
+
+        // Act
+        ExpenseDTO result = expenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Supermercado", result.getDescription());
+        Mockito.verify(recurrentExpenseRepository).findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Supermercado", testUser);
+        Mockito.verify(recurrentExpenseRecordRepository, Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Create expense updates recurrent expense amount when it differs from the loaded expense amount")
+    public void testCreateUpdatesRecurrentExpenseAmountWhenDiffers() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal newAmount = new BigDecimal("120000");
+        BigDecimal oldAmount = new BigDecimal("100000");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Alquiler");
+        dto.setInputAmount(newAmount);
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setAmountInPesos(oldAmount);
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.empty());
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.save(recurrentExpense))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        expenseService.create(dto);
+
+        // Assert
+        assertEquals(newAmount, recurrentExpense.getAmountInPesos());
+        Mockito.verify(recurrentExpenseRepository).save(recurrentExpense);
+    }
+
+    @Test
+    @DisplayName("Create expense does not update recurrent expense amount when it matches the loaded expense amount")
+    public void testCreateDoesNotUpdateRecurrentExpenseAmountWhenSame() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal amount = new BigDecimal("100000");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Alquiler");
+        dto.setInputAmount(amount);
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setAmountInPesos(amount);
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.empty());
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        expenseService.create(dto);
+
+        // Assert
+        Mockito.verify(recurrentExpenseRepository, Mockito.never()).save(any());
     }
 }

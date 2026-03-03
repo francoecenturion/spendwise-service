@@ -2,7 +2,7 @@ package com.spendwise.service.interfaces;
 
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.UserFilterDTO;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

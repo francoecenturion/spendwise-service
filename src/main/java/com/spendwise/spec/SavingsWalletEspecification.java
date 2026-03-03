@@ -3,7 +3,7 @@ package com.spendwise.spec;
 import com.spendwise.dto.SavingsWalletFilterDTO;
 import com.spendwise.enums.SavingsWalletType;
 import com.spendwise.model.SavingsWallet;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 

@@ -6,7 +6,7 @@ import com.spendwise.enums.CategoryType;
 import com.spendwise.model.Category;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.service.CategoryService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

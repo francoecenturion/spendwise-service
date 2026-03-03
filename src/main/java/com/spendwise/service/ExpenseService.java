@@ -10,7 +10,10 @@ import com.spendwise.model.Category;
 import com.spendwise.model.Currency;
 import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.model.RecurrentExpenseRecord;
 import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.RecurrentExpenseRecordRepository;
+import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.service.interfaces.IExpenseService;
 import com.spendwise.spec.ExpenseSpecification;
 import jakarta.transaction.Transactional;
@@ -25,7 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,16 +43,22 @@ public class ExpenseService implements IExpenseService {
     private final DolarApiHistoricalClient dolarApiHistoricalClient;
 
     private final ExpenseRepository expenseRespository;
+    private final RecurrentExpenseRepository recurrentExpenseRepository;
+    private final RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
 
     @Autowired
     public ExpenseService(
         ExpenseRepository expenseRespository,
         DolarApiClient dolarApiClient,
-        DolarApiHistoricalClient dolarApiHistoricalClient
+        DolarApiHistoricalClient dolarApiHistoricalClient,
+        RecurrentExpenseRepository recurrentExpenseRepository,
+        RecurrentExpenseRecordRepository recurrentExpenseRecordRepository
     ) {
         this.expenseRespository = expenseRespository;
         this.dolarApiClient = dolarApiClient;
         this.dolarApiHistoricalClient = dolarApiHistoricalClient;
+        this.recurrentExpenseRepository = recurrentExpenseRepository;
+        this.recurrentExpenseRecordRepository = recurrentExpenseRecordRepository;
     }
 
     @Override
@@ -86,12 +95,45 @@ public class ExpenseService implements IExpenseService {
     @Transactional
     @Override
     public ExpenseDTO create(ExpenseDTO dto) {
-        Expense category = new Expense();
-        this.populate(category, dto);
-        category.setUser(currentUser());
-        Expense savedExpense = expenseRespository.save(category);
+        Expense expense = new Expense();
+        this.populate(expense, dto);
+        User user = currentUser();
+        expense.setUser(user);
+        Expense savedExpense = expenseRespository.save(expense);
+
+        autoCancelRecurrentExpense(savedExpense, user);
+
         log.debug("Expense with id {} created successfully", savedExpense.getId());
         return modelMapper.map(savedExpense, ExpenseDTO.class);
+    }
+
+    private void autoCancelRecurrentExpense(Expense savedExpense, User user) {
+        recurrentExpenseRepository
+                .findByDescriptionIgnoreCaseAndUserAndEnabledTrue(savedExpense.getDescription(), user)
+                .ifPresent(recurrentExpense -> {
+                    LocalDate today = LocalDate.now();
+                    int month = today.getMonthValue();
+                    int year = today.getYear();
+
+                    RecurrentExpenseRecord record = recurrentExpenseRecordRepository
+                            .findByRecurrentExpenseAndMonthAndYear(recurrentExpense, month, year)
+                            .orElseGet(() -> {
+                                RecurrentExpenseRecord newRecord = new RecurrentExpenseRecord();
+                                newRecord.setRecurrentExpense(recurrentExpense);
+                                newRecord.setMonth(month);
+                                newRecord.setYear(year);
+                                newRecord.setUser(user);
+                                return newRecord;
+                            });
+
+                    record.setCancelled(true);
+                    record.setExpense(savedExpense);
+                    recurrentExpenseRecordRepository.save(record);
+                    log.debug("RecurrentExpenseRecord auto-cancelled for recurrentExpense id {} ({}/{})",
+                            recurrentExpense.getId(), month, year);
+
+                    syncAmountIfChanged(savedExpense, recurrentExpense);
+                });
     }
 
     @Transactional
@@ -134,6 +176,23 @@ public class ExpenseService implements IExpenseService {
         return null;
     }
 
+
+    private void syncAmountIfChanged(Expense expense, RecurrentExpense recurrentExpense) {
+        boolean isPesos = isPesosCurrency(expense.getCurrency());
+
+        BigDecimal expenseAmount  = isPesos ? expense.getAmountInPesos() : expense.getAmountInDollars();
+        BigDecimal recurrentAmount = isPesos ? recurrentExpense.getAmountInPesos() : recurrentExpense.getAmountInDollars();
+
+        if (expenseAmount == null) return;
+
+        if (recurrentAmount == null || expenseAmount.compareTo(recurrentAmount) != 0) {
+            recurrentExpense.setAmountInPesos(expense.getAmountInPesos());
+            recurrentExpense.setAmountInDollars(expense.getAmountInDollars());
+            recurrentExpenseRepository.save(recurrentExpense);
+            log.debug("RecurrentExpense id {} amount updated to ARS={} USD={}",
+                    recurrentExpense.getId(), expense.getAmountInPesos(), expense.getAmountInDollars());
+        }
+    }
 
     protected Expense find(Long id) throws ChangeSetPersister.NotFoundException {
         return expenseRespository.findByIdAndUser(id, currentUser())

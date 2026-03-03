@@ -5,7 +5,7 @@ import com.spendwise.dto.IssuingEntityFilterDTO;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.service.IssuingEntityService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

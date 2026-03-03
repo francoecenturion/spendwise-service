@@ -1,6 +1,6 @@
 package com.spendwise.security;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

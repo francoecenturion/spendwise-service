@@ -5,7 +5,7 @@ import com.spendwise.dto.CurrencyFilterDTO;
 import com.spendwise.model.Currency;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.service.CurrencyService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

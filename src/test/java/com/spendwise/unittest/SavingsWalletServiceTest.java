@@ -6,7 +6,7 @@ import com.spendwise.enums.SavingsWalletType;
 import com.spendwise.model.SavingsWallet;
 import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.service.SavingsWalletService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
