@@ -10,6 +10,7 @@ import com.spendwise.model.Category;
 import com.spendwise.model.Currency;
 import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
+import com.spendwise.model.RecurrentExpense;
 import com.spendwise.model.RecurrentExpenseRecord;
 import com.spendwise.repository.ExpenseRepository;
 import com.spendwise.repository.RecurrentExpenseRecordRepository;
