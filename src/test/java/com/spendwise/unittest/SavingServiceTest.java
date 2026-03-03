@@ -10,7 +10,7 @@ import com.spendwise.model.Currency;
 import com.spendwise.model.Saving;
 import com.spendwise.repository.SavingRepository;
 import com.spendwise.service.SavingService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,6 +1,6 @@
 package com.spendwise.repository;
 
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 

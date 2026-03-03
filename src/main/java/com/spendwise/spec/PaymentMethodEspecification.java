@@ -3,7 +3,7 @@ package com.spendwise.spec;
 import com.spendwise.dto.PaymentMethodFilterDTO;
 import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.PaymentMethod;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 

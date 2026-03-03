@@ -9,7 +9,7 @@ import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.PaymentMethodService;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

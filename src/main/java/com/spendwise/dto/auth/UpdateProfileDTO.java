@@ -8,5 +8,7 @@ public class UpdateProfileDTO {
     private String name;
     private String surname;
     private String profilePicture;
+    private String currentPassword;
+    private String newPassword;
 
 }

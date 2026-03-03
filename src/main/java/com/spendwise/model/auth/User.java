@@ -1,4 +1,4 @@
-package com.spendwise.model.user;
+package com.spendwise.model.auth;
 
 import com.spendwise.model.BaseEntity;
 import jakarta.persistence.Column;

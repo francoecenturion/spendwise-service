@@ -1,7 +1,7 @@
 package com.spendwise.model;
 
 import com.spendwise.enums.SavingsWalletType;
-import com.spendwise.model.user.User;
+import com.spendwise.model.auth.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
