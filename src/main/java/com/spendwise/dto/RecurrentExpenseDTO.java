@@ -10,6 +10,7 @@ public class RecurrentExpenseDTO {
 
     private Long id;
     private String description;
+    private String icon;
     private BigDecimal amountInPesos;
     private BigDecimal amountInDollars;
     private Integer dayOfMonth;

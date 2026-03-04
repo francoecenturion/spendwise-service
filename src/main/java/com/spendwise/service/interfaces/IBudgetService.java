@@ -17,5 +17,6 @@ public interface IBudgetService {
     BudgetDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
     BudgetDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
     BudgetDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
+    BudgetDTO createNextMonth() throws ChangeSetPersister.NotFoundException;
 
 }

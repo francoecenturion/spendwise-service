@@ -76,4 +76,11 @@ public class BudgetController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/next-month")
+    public ResponseEntity<BudgetDTO> createNextMonth() throws ChangeSetPersister.NotFoundException {
+        BudgetDTO result = iBudgetService.createNextMonth();
+        log.debug("POST /next-month Budget Finished {}", result);
+        return ResponseEntity.ok(result);
+    }
+
 }
