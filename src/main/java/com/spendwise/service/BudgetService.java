@@ -178,6 +178,29 @@ public class BudgetService implements IBudgetService {
         return dto;
     }
 
+    @Transactional
+    @Override
+    public BudgetDTO createNextMonth() throws ChangeSetPersister.NotFoundException {
+        User user = currentUser();
+        Budget latest = budgetRepository.findTopByUserOrderByYearDescMonthDesc(user)
+                .orElseThrow(ChangeSetPersister.NotFoundException::new);
+
+        int nextMonth = latest.getMonth() == 12 ? 1 : latest.getMonth() + 1;
+        int nextYear = latest.getMonth() == 12 ? latest.getYear() + 1 : latest.getYear();
+
+        Budget newBudget = new Budget();
+        newBudget.setDescription(latest.getDescription());
+        newBudget.setMonth(nextMonth);
+        newBudget.setYear(nextYear);
+        newBudget.setRecurrentExpenses(new ArrayList<>(latest.getRecurrentExpenses()));
+        newBudget.setEnabled(true);
+        newBudget.setUser(user);
+
+        Budget saved = budgetRepository.save(newBudget);
+        log.debug("Budget for next month ({}/{}) created from budget {}", nextMonth, nextYear, latest.getId());
+        return toDTO(saved);
+    }
+
     protected Budget find(Long id) throws ChangeSetPersister.NotFoundException {
         return budgetRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);

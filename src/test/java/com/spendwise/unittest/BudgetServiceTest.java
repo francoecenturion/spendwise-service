@@ -427,6 +427,82 @@ public class BudgetServiceTest {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // CREATE NEXT MONTH
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Create next month budget copies previous budget to next month")
+    public void testCreateNextMonth() throws ChangeSetPersister.NotFoundException {
+        Budget latestBudget = new Budget();
+        latestBudget.setId(1L);
+        latestBudget.setDescription("Presupuesto Mensual");
+        latestBudget.setMonth(3);
+        latestBudget.setYear(2026);
+        latestBudget.setEnabled(true);
+        latestBudget.setUser(testUser);
+        latestBudget.setRecurrentExpenses(new ArrayList<>(List.of(re1, re2)));
+
+        Mockito.when(budgetRepository.findTopByUserOrderByYearDescMonthDesc(testUser))
+                .thenReturn(Optional.of(latestBudget));
+        Mockito.when(budgetRepository.save(any(Budget.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(re1, 4, 2026))
+                .thenReturn(Optional.empty());
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(re2, 4, 2026))
+                .thenReturn(Optional.empty());
+
+        BudgetDTO result = budgetService.createNextMonth();
+
+        assertNotNull(result);
+        assertEquals("Presupuesto Mensual", result.getDescription());
+        assertEquals(4, result.getMonth());
+        assertEquals(2026, result.getYear());
+        assertTrue(result.getEnabled());
+        assertEquals(2, result.getRecurrentExpenses().size());
+        Mockito.verify(budgetRepository).findTopByUserOrderByYearDescMonthDesc(testUser);
+        Mockito.verify(budgetRepository).save(any(Budget.class));
+        Mockito.verifyNoMoreInteractions(budgetRepository);
+    }
+
+    @Test
+    @DisplayName("Create next month budget in December creates January of the next year")
+    public void testCreateNextMonthFromDecember() throws ChangeSetPersister.NotFoundException {
+        Budget decemberBudget = new Budget();
+        decemberBudget.setId(1L);
+        decemberBudget.setDescription("Presupuesto Diciembre");
+        decemberBudget.setMonth(12);
+        decemberBudget.setYear(2025);
+        decemberBudget.setEnabled(true);
+        decemberBudget.setUser(testUser);
+        decemberBudget.setRecurrentExpenses(Collections.emptyList());
+
+        Mockito.when(budgetRepository.findTopByUserOrderByYearDescMonthDesc(testUser))
+                .thenReturn(Optional.of(decemberBudget));
+        Mockito.when(budgetRepository.save(any(Budget.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BudgetDTO result = budgetService.createNextMonth();
+
+        assertEquals(1, result.getMonth());
+        assertEquals(2026, result.getYear());
+        assertTrue(result.getEnabled());
+        Mockito.verify(budgetRepository).findTopByUserOrderByYearDescMonthDesc(testUser);
+        Mockito.verify(budgetRepository).save(any(Budget.class));
+        Mockito.verifyNoMoreInteractions(budgetRepository);
+        Mockito.verifyNoInteractions(recurrentExpenseRecordRepository);
+    }
+
+    @Test
+    @DisplayName("Create next month budget throws NotFoundException when no previous budget exists")
+    public void testCreateNextMonthThrowsWhenNoPreviousBudget() {
+        Mockito.when(budgetRepository.findTopByUserOrderByYearDescMonthDesc(testUser))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ChangeSetPersister.NotFoundException.class,
+                () -> budgetService.createNextMonth());
+        Mockito.verify(budgetRepository).findTopByUserOrderByYearDescMonthDesc(testUser);
+        Mockito.verifyNoMoreInteractions(budgetRepository);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // TOTALS CALCULATION
     // ──────────────────────────────────────────────────────────────────────────
 
