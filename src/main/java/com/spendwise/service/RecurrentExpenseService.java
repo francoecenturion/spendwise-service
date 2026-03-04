@@ -37,6 +37,7 @@ public class RecurrentExpenseService implements IRecurrentExpenseService {
     @Override
     public void populate(RecurrentExpense recurrentExpense, RecurrentExpenseDTO dto) {
         recurrentExpense.setDescription(dto.getDescription());
+        recurrentExpense.setIcon(dto.getIcon());
         recurrentExpense.setAmountInPesos(dto.getAmountInPesos());
         recurrentExpense.setAmountInDollars(dto.getAmountInDollars());
         recurrentExpense.setDayOfMonth(dto.getDayOfMonth());

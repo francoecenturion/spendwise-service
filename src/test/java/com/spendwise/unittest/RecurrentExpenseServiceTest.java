@@ -124,6 +124,35 @@ public class RecurrentExpenseServiceTest {
         assertEquals("Alquiler", result.getDescription());
         assertEquals(10, result.getDayOfMonth());
         assertTrue(result.getEnabled());
+        assertNull(result.getIcon());
+        Mockito.verify(recurrentExpenseRepository).save(any(RecurrentExpense.class));
+        Mockito.verifyNoMoreInteractions(recurrentExpenseRepository);
+    }
+
+    @Test
+    @DisplayName("Create recurrent expense with icon stores icon URL")
+    public void testCreateWithIcon() {
+        // Arrange
+        RecurrentExpenseDTO dto = new RecurrentExpenseDTO();
+        dto.setDescription("Netflix");
+        dto.setAmountInPesos(new BigDecimal("5000"));
+        dto.setDayOfMonth(15);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currency);
+        dto.setIcon("https://res.cloudinary.com/demo/image/upload/netflix.png");
+
+        Mockito.when(recurrentExpenseRepository.save(any(RecurrentExpense.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        RecurrentExpenseDTO result = recurrentExpenseService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Netflix", result.getDescription());
+        assertEquals("https://res.cloudinary.com/demo/image/upload/netflix.png", result.getIcon());
+        assertTrue(result.getEnabled());
         Mockito.verify(recurrentExpenseRepository).save(any(RecurrentExpense.class));
         Mockito.verifyNoMoreInteractions(recurrentExpenseRepository);
     }
@@ -297,6 +326,7 @@ public class RecurrentExpenseServiceTest {
         updateDTO.setDayOfMonth(12);
         updateDTO.setAmountInPesos(new BigDecimal("120000"));
         updateDTO.setAmountInDollars(new BigDecimal("90"));
+        updateDTO.setIcon("https://res.cloudinary.com/demo/image/upload/alquiler.png");
 
         Mockito.when(recurrentExpenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
         Mockito.when(recurrentExpenseRepository.save(any(RecurrentExpense.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -308,6 +338,7 @@ public class RecurrentExpenseServiceTest {
         assertNotNull(result);
         assertEquals("Alquiler nuevo", result.getDescription());
         assertEquals(12, result.getDayOfMonth());
+        assertEquals("https://res.cloudinary.com/demo/image/upload/alquiler.png", result.getIcon());
         Mockito.verify(recurrentExpenseRepository).findByIdAndUser(id, testUser);
         Mockito.verify(recurrentExpenseRepository).save(entity);
         Mockito.verifyNoMoreInteractions(recurrentExpenseRepository);

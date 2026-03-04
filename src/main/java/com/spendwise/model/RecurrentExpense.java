@@ -37,6 +37,9 @@ public class RecurrentExpense extends BaseEntity {
     @JoinColumn(name = "CURRENCY_ID")
     private Currency currency;
 
+    @Column(name = "ICON", length = 2048)
+    private String icon;
+
     @Column(name = "ENABLED")
     private Boolean enabled;
 
