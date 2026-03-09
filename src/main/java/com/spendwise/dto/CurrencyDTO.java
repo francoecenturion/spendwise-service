@@ -10,5 +10,6 @@ public class CurrencyDTO  {
     private String name;
     private String symbol;
     private Boolean enabled;
+    private Boolean isDefault;
 
 }

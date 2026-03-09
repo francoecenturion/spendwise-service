@@ -82,4 +82,18 @@ public class CurrencyController {
         return ResponseEntity
                 .ok(currency);
     }
+
+    @PatchMapping("/{id}/setDefault")
+    public ResponseEntity<CurrencyDTO> setDefault(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        CurrencyDTO currency = iCurrencyService.setDefault(id);
+        log.debug("SET DEFAULT Currency Finished {}", currency);
+        return ResponseEntity.ok(currency);
+    }
+
+    @PatchMapping("/{id}/removeDefault")
+    public ResponseEntity<CurrencyDTO> removeDefault(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        CurrencyDTO currency = iCurrencyService.removeDefault(id);
+        log.debug("REMOVE DEFAULT Currency Finished {}", currency);
+        return ResponseEntity.ok(currency);
+    }
 }

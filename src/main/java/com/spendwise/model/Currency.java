@@ -20,6 +20,9 @@ public class Currency extends BaseEntity {
     @Column(name = "ENABLED")
     private Boolean enabled;
 
+    @Column(name = "IS_DEFAULT")
+    private Boolean isDefault;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID")
     private User user;
