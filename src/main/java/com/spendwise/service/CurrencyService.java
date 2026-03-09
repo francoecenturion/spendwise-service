@@ -108,6 +108,27 @@ public class CurrencyService implements ICurrencyService {
         return modelMapper.map(savedCurrency, CurrencyDTO.class);
     }
 
+    @Transactional
+    @Override
+    public CurrencyDTO setDefault(Long id) throws ChangeSetPersister.NotFoundException {
+        Currency currency = find(id);
+        currencyRepository.clearDefaultsExcept(currentUser(), id);
+        currency.setIsDefault(true);
+        Currency savedCurrency = currencyRepository.save(currency);
+        log.debug("Currency with id {} set as default successfully", savedCurrency.getId());
+        return modelMapper.map(savedCurrency, CurrencyDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public CurrencyDTO removeDefault(Long id) throws ChangeSetPersister.NotFoundException {
+        Currency currency = find(id);
+        currency.setIsDefault(false);
+        Currency savedCurrency = currencyRepository.save(currency);
+        log.debug("Currency with id {} removed from default successfully", savedCurrency.getId());
+        return modelMapper.map(savedCurrency, CurrencyDTO.class);
+    }
+
     protected Currency find(Long id) throws ChangeSetPersister.NotFoundException {
         return currencyRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);
