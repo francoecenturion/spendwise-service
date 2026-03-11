@@ -438,4 +438,88 @@ public class IssuingEntityServiceTest {
         Mockito.verifyNoMoreInteractions(issuingEntityRepository);
     }
 
+    // ── icon ──────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Create persists icon field when provided as emoji")
+    public void testCreate_withEmojiIcon() {
+
+        // Arrange
+        IssuingEntityDTO dto = new IssuingEntityDTO();
+        dto.setDescription("Banco Galicia");
+        dto.setIcon("🏦");
+
+        Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        IssuingEntityDTO obtained = issuingEntityService.create(dto);
+
+        // Assert
+        assertEquals("🏦", obtained.getIcon());
+        Mockito.verify(issuingEntityRepository).save(any(IssuingEntity.class));
+    }
+
+    @Test
+    @DisplayName("Create persists icon field when provided as Cloudinary URL")
+    public void testCreate_withImageUrlIcon() {
+
+        // Arrange
+        IssuingEntityDTO dto = new IssuingEntityDTO();
+        dto.setDescription("Naranja X");
+        dto.setIcon("https://res.cloudinary.com/demo/image/upload/naranjax.png");
+
+        Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        IssuingEntityDTO obtained = issuingEntityService.create(dto);
+
+        // Assert
+        assertEquals("https://res.cloudinary.com/demo/image/upload/naranjax.png", obtained.getIcon());
+    }
+
+    @Test
+    @DisplayName("Update persists updated icon field")
+    public void testUpdate_withIcon() throws Exception {
+
+        // Arrange
+        Long id = 1L;
+        IssuingEntity existing = new IssuingEntity();
+        existing.setId(id);
+        existing.setDescription("MercadoPago");
+        existing.setEnabled(true);
+        existing.setIcon("💙");
+
+        IssuingEntityDTO dto = new IssuingEntityDTO();
+        dto.setDescription("MercadoPago");
+        dto.setIcon("💳");
+
+        Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existing));
+        Mockito.when(issuingEntityRepository.save(existing)).thenReturn(existing);
+
+        // Act
+        IssuingEntityDTO obtained = issuingEntityService.update(id, dto);
+
+        // Assert
+        assertEquals("💳", obtained.getIcon());
+        Mockito.verify(issuingEntityRepository).save(existing);
+    }
+
+    @Test
+    @DisplayName("Create with null icon stores null in entity")
+    public void testCreate_withNullIcon() {
+
+        // Arrange
+        IssuingEntityDTO dto = new IssuingEntityDTO();
+        dto.setDescription("Banco Nación");
+        dto.setIcon(null);
+
+        Mockito.when(issuingEntityRepository.save(any(IssuingEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        IssuingEntityDTO obtained = issuingEntityService.create(dto);
+
+        // Assert
+        assertNull(obtained.getIcon());
+    }
+
 }

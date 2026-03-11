@@ -12,5 +12,6 @@ public class AuthResponseDTO {
     private String name;
     private String surname;
     private String profilePicture;
+    private String role;
 
 }

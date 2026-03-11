@@ -5,14 +5,17 @@ import com.spendwise.dto.ExpenseDTO;
 import com.spendwise.dto.MailImportConfirmDTO;
 import com.spendwise.dto.MailImportDTO;
 import com.spendwise.dto.MailImportFilterDTO;
+import com.spendwise.dto.MerchantBindingDTO;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.enums.MailImportStatus;
 import com.spendwise.model.Category;
 import com.spendwise.model.MailImport;
+import com.spendwise.model.MerchantBinding;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.auth.User;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.MailImportRepository;
+import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.interfaces.IDebtService;
 import com.spendwise.service.interfaces.IExpenseService;
@@ -40,6 +43,7 @@ public class MailImportService implements IMailImportService {
     private final MailImportRepository mailImportRepository;
     private final CategoryRepository categoryRepository;
     private final PaymentMethodRepository paymentMethodRepository;
+    private final MerchantBindingRepository merchantBindingRepository;
     private final IExpenseService expenseService;
     private final IDebtService debtService;
     private final ModelMapper modelMapper = new ModelMapper();
@@ -49,11 +53,13 @@ public class MailImportService implements IMailImportService {
             MailImportRepository mailImportRepository,
             CategoryRepository categoryRepository,
             PaymentMethodRepository paymentMethodRepository,
+            MerchantBindingRepository merchantBindingRepository,
             IExpenseService expenseService,
             IDebtService debtService) {
         this.mailImportRepository = mailImportRepository;
         this.categoryRepository = categoryRepository;
         this.paymentMethodRepository = paymentMethodRepository;
+        this.merchantBindingRepository = merchantBindingRepository;
         this.expenseService = expenseService;
         this.debtService = debtService;
     }
@@ -91,16 +97,18 @@ public class MailImportService implements IMailImportService {
             debtDTO.setPersonal(true);
             debtDTO.setCreditor(mailImport.getSenderEntity());
 
+            PaymentMethod debtPm = null;
             if (dto.getPaymentMethodId() != null) {
-                PaymentMethod pm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
+                debtPm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
                         .orElseThrow(ChangeSetPersister.NotFoundException::new);
                 PaymentMethodDTO pmDTO = new PaymentMethodDTO();
-                pmDTO.setId(pm.getId());
-                pmDTO.setName(pm.getName());
+                pmDTO.setId(debtPm.getId());
+                pmDTO.setName(debtPm.getName());
                 debtDTO.setPaymentMethod(pmDTO);
             }
 
             debtService.create(debtDTO);
+            saveBinding(mailImport, description, null, debtPm);
             mailImport.setStatus(MailImportStatus.CONFIRMED);
             MailImport saved = mailImportRepository.save(mailImport);
             log.debug("MailImport {} confirmed as Debt (creditor={})", id, mailImport.getSenderEntity());
@@ -122,8 +130,9 @@ public class MailImportService implements IMailImportService {
         categoryDTO.setName(category.getName());
         expenseDTO.setCategory(categoryDTO);
 
+        PaymentMethod pm = null;
         if (dto.getPaymentMethodId() != null) {
-            PaymentMethod pm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
+            pm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
                     .orElseThrow(ChangeSetPersister.NotFoundException::new);
             PaymentMethodDTO pmDTO = new PaymentMethodDTO();
             pmDTO.setId(pm.getId());
@@ -134,6 +143,7 @@ public class MailImportService implements IMailImportService {
         }
 
         ExpenseDTO createdExpense = expenseService.create(expenseDTO);
+        saveBinding(mailImport, description, category, pm);
 
         mailImport.setStatus(MailImportStatus.CONFIRMED);
         mailImport.setExpense(new com.spendwise.model.Expense());
@@ -157,6 +167,38 @@ public class MailImportService implements IMailImportService {
     @Override
     public long getPendingCount() {
         return mailImportRepository.countByUserAndStatus(currentUser(), MailImportStatus.PENDING);
+    }
+
+    @Override
+    public MerchantBindingDTO lookupBinding(String merchant) {
+        return merchantBindingRepository
+                .findByUserAndMerchantNameIgnoreCase(currentUser(), merchant)
+                .map(b -> {
+                    MerchantBindingDTO dto = new MerchantBindingDTO();
+                    if (b.getCategory() != null) dto.setCategoryId(b.getCategory().getId());
+                    if (b.getPaymentMethod() != null) dto.setPaymentMethodId(b.getPaymentMethod().getId());
+                    dto.setDescription(b.getDescription());
+                    return dto;
+                })
+                .orElse(null);
+    }
+
+    private void saveBinding(MailImport mailImport, String description, Category category, PaymentMethod pm) {
+        if (mailImport.getParsedMerchant() == null) return;
+        User user = currentUser();
+        MerchantBinding binding = merchantBindingRepository
+                .findByUserAndMerchantNameIgnoreCase(user, mailImport.getParsedMerchant())
+                .orElseGet(() -> {
+                    MerchantBinding b = new MerchantBinding();
+                    b.setUser(user);
+                    b.setMerchantName(mailImport.getParsedMerchant());
+                    return b;
+                });
+        binding.setDescription(description);
+        binding.setCategory(category);
+        binding.setPaymentMethod(pm);
+        merchantBindingRepository.save(binding);
+        log.debug("MerchantBinding saved for merchant='{}'", mailImport.getParsedMerchant());
     }
 
     private MailImport find(Long id) throws ChangeSetPersister.NotFoundException {

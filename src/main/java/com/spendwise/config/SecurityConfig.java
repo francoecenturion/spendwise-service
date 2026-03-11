@@ -46,8 +46,9 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/auth/verify").permitAll()
-                .requestMatchers("/h2-console/**", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/verify", "/setup/recommendations").permitAll()
+                .requestMatchers("/h2-console/**", "/error", "/health").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(fo -> fo.sameOrigin())) // needed for H2 console

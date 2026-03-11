@@ -3,6 +3,7 @@ package com.spendwise.controller;
 import com.spendwise.dto.MailImportConfirmDTO;
 import com.spendwise.dto.MailImportDTO;
 import com.spendwise.dto.MailImportFilterDTO;
+import com.spendwise.dto.MerchantBindingDTO;
 import com.spendwise.service.interfaces.IMailImportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,13 @@ public class MailImportController {
     @GetMapping("/pending-count")
     public ResponseEntity<Map<String, Long>> getPendingCount() {
         return ResponseEntity.ok(Map.of("count", mailImportService.getPendingCount()));
+    }
+
+    @GetMapping("/binding")
+    public ResponseEntity<MerchantBindingDTO> lookupBinding(@RequestParam String merchant) {
+        MerchantBindingDTO result = mailImportService.lookupBinding(merchant);
+        if (result == null) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(result);
     }
 
 }

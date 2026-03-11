@@ -1,5 +1,6 @@
 package com.spendwise.service.interfaces;
 
+import com.spendwise.dto.RegisterWithSetupDTO;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
@@ -7,7 +8,7 @@ import com.spendwise.dto.auth.UpdateProfileDTO;
 
 public interface IAuthService {
 
-    String register(UserDTO dto);
+    String register(RegisterWithSetupDTO dto);
     String verifyEmail(String token);
     AuthResponseDTO login(LoginRequestDTO dto);
     UserDTO getProfile();

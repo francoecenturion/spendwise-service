@@ -36,6 +36,7 @@ public class IssuingEntityService implements IIssuingEntityService {
     @Override
     public void populate(IssuingEntity issuingEntity, IssuingEntityDTO dto) {
         issuingEntity.setDescription(dto.getDescription());
+        issuingEntity.setIcon(dto.getIcon());
     }
 
     @Transactional
