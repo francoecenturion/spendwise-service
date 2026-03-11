@@ -1,11 +1,17 @@
 package com.spendwise.unittest;
 
+import com.spendwise.dto.RegisterWithSetupDTO;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
 import com.spendwise.dto.auth.UpdateProfileDTO;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
+import com.spendwise.repository.CurrencyRepository;
+import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.PaymentMethodRepository;
+import com.spendwise.repository.RecommendedEntityRepository;
+import com.spendwise.repository.RecommendedPaymentMethodRepository;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
@@ -57,6 +63,21 @@ public class AuthServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private CurrencyRepository currencyRepository;
+
+    @Mock
+    private IssuingEntityRepository issuingEntityRepository;
+
+    @Mock
+    private PaymentMethodRepository paymentMethodRepository;
+
+    @Mock
+    private RecommendedEntityRepository recommendedEntityRepository;
+
+    @Mock
+    private RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
+
     @InjectMocks
     private AuthService authService;
 
@@ -103,7 +124,7 @@ public class AuthServiceTest {
     public void testRegister() {
 
         // Arrange
-        UserDTO dto = new UserDTO();
+        RegisterWithSetupDTO dto = new RegisterWithSetupDTO();
         dto.setEmail("john@example.com");
         dto.setName("John");
         dto.setPassword("rawPassword");
@@ -116,10 +137,9 @@ public class AuthServiceTest {
         // Assert
         assertEquals("Registration successful. Please check your email to verify your account.", result);
         Mockito.verify(userRepository).existsByEmail("john@example.com");
-        Mockito.verify(userService).populate(any(User.class), eq(dto));
         Mockito.verify(userRepository).save(any(User.class));
         Mockito.verify(verificationTokenRepository).save(any(VerificationToken.class));
-        Mockito.verify(emailService).sendVerificationEmail(any(), any(), contains("/auth/verify?token="));
+        Mockito.verify(emailService).sendVerificationEmail(any(), any(), contains("/verify-email?token="));
     }
 
     @Test
@@ -127,7 +147,7 @@ public class AuthServiceTest {
     public void testRegisterEmailAlreadyInUse() {
 
         // Arrange
-        UserDTO dto = new UserDTO();
+        RegisterWithSetupDTO dto = new RegisterWithSetupDTO();
         dto.setEmail("existing@example.com");
         dto.setName("John");
         dto.setPassword("rawPassword");
@@ -141,7 +161,7 @@ public class AuthServiceTest {
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         Mockito.verify(userRepository).existsByEmail("existing@example.com");
         Mockito.verifyNoMoreInteractions(userRepository);
-        Mockito.verifyNoInteractions(userService, verificationTokenRepository, emailService);
+        Mockito.verifyNoInteractions(verificationTokenRepository, emailService);
     }
 
     @Test
@@ -149,7 +169,7 @@ public class AuthServiceTest {
     public void testRegisterSetsEnabledFalse() {
 
         // Arrange
-        UserDTO dto = new UserDTO();
+        RegisterWithSetupDTO dto = new RegisterWithSetupDTO();
         dto.setEmail("john@example.com");
         dto.setName("John");
         dto.setPassword("rawPassword");

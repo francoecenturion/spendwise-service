@@ -1,5 +1,6 @@
 package com.spendwise.controller;
 
+import com.spendwise.dto.RegisterWithSetupDTO;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
@@ -25,7 +26,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody UserDTO dto) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterWithSetupDTO dto) {
         String message = authService.register(dto);
         log.debug("POST /auth/register finished for {}", dto.getEmail());
         return ResponseEntity.ok(Map.of("message", message));

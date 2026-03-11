@@ -1,9 +1,8 @@
 package com.spendwise.model.auth;
 
+import com.spendwise.enums.Role;
 import com.spendwise.model.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -20,5 +19,9 @@ public class User extends BaseEntity {
     private String surname;
     private Boolean enabled;
     private String profilePicture;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ROLE")
+    private Role role = Role.USER;
 
 }

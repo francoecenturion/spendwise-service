@@ -8,5 +8,6 @@ public class IssuingEntityDTO {
     private Long id;
     private String description;
     private Boolean enabled;
+    private String icon;
 
 }
