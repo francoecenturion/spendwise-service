@@ -10,5 +10,6 @@ public class CategoryDTO {
     private String name;
     private Boolean enabled;
     private CategoryType type;
+    private String icon;
 
 }

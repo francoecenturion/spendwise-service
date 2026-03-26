@@ -10,4 +10,5 @@ public class SavingsWalletDTO {
     private String savingsWalletType;
     private Boolean enabled;
     private String icon;
+    private IssuingEntityDTO issuingEntity;
 }

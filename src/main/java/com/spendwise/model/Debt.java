@@ -46,6 +46,10 @@ public class Debt extends BaseEntity {
     @JoinColumn(name = "PAYMENT_METHOD_ID")
     private PaymentMethod paymentMethod;
 
+    @ManyToOne
+    @JoinColumn(name = "CURRENCY_ID")
+    private Currency currency;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID")
     private User user;

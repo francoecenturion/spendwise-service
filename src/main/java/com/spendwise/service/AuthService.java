@@ -13,8 +13,10 @@ import com.spendwise.model.RecommendedEntity;
 import com.spendwise.model.RecommendedPaymentMethod;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
+import com.spendwise.model.auth.PasswordResetToken;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.PasswordResetTokenRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
 import com.spendwise.repository.RecommendedPaymentMethodRepository;
@@ -56,6 +58,7 @@ public class AuthService implements IAuthService {
     private final PaymentMethodRepository paymentMethodRepository;
     private final RecommendedEntityRepository recommendedEntityRepository;
     private final RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -71,7 +74,8 @@ public class AuthService implements IAuthService {
                        IssuingEntityRepository issuingEntityRepository,
                        PaymentMethodRepository paymentMethodRepository,
                        RecommendedEntityRepository recommendedEntityRepository,
-                       RecommendedPaymentMethodRepository recommendedPaymentMethodRepository) {
+                       RecommendedPaymentMethodRepository recommendedPaymentMethodRepository,
+                       PasswordResetTokenRepository passwordResetTokenRepository) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -83,6 +87,7 @@ public class AuthService implements IAuthService {
         this.paymentMethodRepository = paymentMethodRepository;
         this.recommendedEntityRepository = recommendedEntityRepository;
         this.recommendedPaymentMethodRepository = recommendedPaymentMethodRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -136,6 +141,7 @@ public class AuthService implements IAuthService {
                 recommendedEntityRepository.findById(entityId).ifPresent(rec -> {
                     IssuingEntity ie = new IssuingEntity();
                     ie.setDescription(rec.getName());
+                    ie.setIcon(rec.getIconUrl());
                     ie.setEnabled(true);
                     ie.setUser(user);
                     entityMap.put(rec.getId(), issuingEntityRepository.save(ie));
@@ -150,6 +156,7 @@ public class AuthService implements IAuthService {
                 recommendedPaymentMethodRepository.findById(pmId).ifPresent(rec -> {
                     PaymentMethod pm = new PaymentMethod();
                     pm.setName(rec.getName());
+                    pm.setIcon(rec.getIconUrl());
                     pm.setPaymentMethodType(rec.getPaymentMethodType());
                     pm.setEnabled(true);
                     pm.setUser(user);
@@ -267,5 +274,50 @@ public class AuthService implements IAuthService {
         user.setEnabled(false);
         userRepository.save(user);
         log.debug("Account disabled for user {}", user.getEmail());
+    }
+
+    // ── Forgot password ───────────────────────────────────────────────────────
+
+    @Transactional
+    @Override
+    public void forgotPassword(String email) {
+        // Always return silently to avoid user enumeration
+        userRepository.findByEmail(email).ifPresent(user -> {
+            passwordResetTokenRepository.deleteByUser(user);
+
+            PasswordResetToken resetToken = new PasswordResetToken();
+            resetToken.setToken(UUID.randomUUID().toString());
+            resetToken.setUser(user);
+            resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
+            passwordResetTokenRepository.save(resetToken);
+
+            String link = baseUrl + "/reset-password?token=" + resetToken.getToken();
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), link);
+            log.debug("Password reset email requested for {}", email);
+        });
+    }
+
+    // ── Reset password ────────────────────────────────────────────────────────
+
+    @Transactional
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña debe tener al menos 8 caracteres");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Token inválido o expirado"));
+
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El enlace expiró. Solicitá uno nuevo.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetTokenRepository.delete(resetToken);
+        log.debug("Password reset successfully for user {}", user.getEmail());
     }
 }

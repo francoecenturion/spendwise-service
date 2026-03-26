@@ -14,5 +14,7 @@ public interface IAuthService {
     UserDTO getProfile();
     UserDTO updateProfile(UpdateProfileDTO dto);
     void deleteAccount();
+    void forgotPassword(String email);
+    void resetPassword(String token, String newPassword);
 
 }

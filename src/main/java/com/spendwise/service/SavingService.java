@@ -1,9 +1,5 @@
 package com.spendwise.service;
 
-import com.spendwise.client.dolarApi.DolarApiClient;
-import com.spendwise.client.dolarApi.DolarApiDTO;
-import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalClient;
-import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.SavingDTO;
 import com.spendwise.dto.SavingFilterDTO;
 import com.spendwise.model.Currency;
@@ -27,28 +23,18 @@ import org.springframework.stereotype.Service;
 import com.spendwise.model.auth.User;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
 
 @Service
 public class SavingService implements ISavingService {
 
     private static final Logger log = LoggerFactory.getLogger(SavingService.class);
     private final ModelMapper modelMapper = new ModelMapper();
-    private final DolarApiClient dolarApiClient;
-    private final DolarApiHistoricalClient dolarApiHistoricalClient;
 
     private final SavingRepository savingRespository;
 
     @Autowired
-    public SavingService(
-        SavingRepository savingRespository,
-        DolarApiClient dolarApiClient,
-        DolarApiHistoricalClient dolarApiHistoricalClient
-    ) {
+    public SavingService(SavingRepository savingRespository) {
         this.savingRespository = savingRespository;
-        this.dolarApiClient = dolarApiClient;
-        this.dolarApiHistoricalClient = dolarApiHistoricalClient;
     }
 
     @Override
@@ -63,10 +49,10 @@ public class SavingService implements ISavingService {
         BigDecimal inputAmount = dto.getInputAmount();
         if (isPesosCurrency(currency)) {
             saving.setAmountInPesos(inputAmount);
-            saving.setAmountInDollars(this.calculateAmountInDollars(inputAmount, dto.getDate()));
+            saving.setAmountInDollars(null);
         } else {
             saving.setAmountInDollars(inputAmount);
-            saving.setAmountInPesos(this.calculateAmountInPesos(inputAmount, dto.getDate()));
+            saving.setAmountInPesos(null);
         }
     }
 
@@ -135,39 +121,5 @@ public class SavingService implements ISavingService {
 
     private User currentUser() {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    }
-
-    public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {
-
-        BigDecimal amountInDollars;
-
-        if(LocalDate.now().isEqual(date)) {
-            // Dolar Api
-            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
-            amountInDollars = amountInPesos.divide(dolarApiDTO.getSellingPrice(), 4, RoundingMode.HALF_EVEN);
-        } else {
-            // Dolar Api Historical
-            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
-            amountInDollars = amountInPesos.divide(dolarApiHistoricalDTO.getSellingPrice(), 4,  RoundingMode.HALF_EVEN);
-        }
-
-        return amountInDollars;
-    }
-
-    public BigDecimal calculateAmountInPesos(BigDecimal amountInDollars, LocalDate date) {
-
-        BigDecimal amountInPesos;
-
-        if(LocalDate.now().isEqual(date)) {
-            // Dolar Api
-            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
-            amountInPesos = amountInDollars.multiply(dolarApiDTO.getSellingPrice());
-        } else {
-            // Dolar Api Historical
-            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
-            amountInPesos = amountInDollars.multiply(dolarApiHistoricalDTO.getSellingPrice());
-        }
-
-        return amountInPesos;
     }
 }

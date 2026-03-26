@@ -37,6 +37,7 @@ public class CurrencyService implements ICurrencyService {
     public void populate(Currency currency, CurrencyDTO dto) {
         currency.setName(dto.getName());
         currency.setSymbol(dto.getSymbol());
+        currency.setIcon(dto.getIcon());
     }
 
     @Transactional

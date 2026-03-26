@@ -83,8 +83,33 @@ public class MailImportService implements IMailImportService {
         if (mailImport.getStatus() != MailImportStatus.PENDING) {
             throw new IllegalStateException("Only PENDING imports can be confirmed");
         }
+        return confirmInternal(mailImport, dto, currentUser());
+    }
 
-        User user = currentUser();
+    @Transactional
+    @Override
+    public void autoConfirmIfBound(Long mailImportId) {
+        MailImport mailImport = mailImportRepository.findById(mailImportId).orElse(null);
+        if (mailImport == null || mailImport.getParsedMerchant() == null) return;
+        if (mailImport.getStatus() != MailImportStatus.PENDING) return;
+
+        User user = mailImport.getUser();
+        merchantBindingRepository.findByUserAndMerchantNameIgnoreCase(user, mailImport.getParsedMerchant())
+                .ifPresent(binding -> {
+                    try {
+                        MailImportConfirmDTO dto = new MailImportConfirmDTO();
+                        if (binding.getCategory() != null) dto.setCategoryId(binding.getCategory().getId());
+                        if (binding.getPaymentMethod() != null) dto.setPaymentMethodId(binding.getPaymentMethod().getId());
+                        dto.setDescription(binding.getDescription());
+                        confirmInternal(mailImport, dto, user);
+                        log.debug("Auto-confirmed MailImport {} for merchant '{}'", mailImportId, mailImport.getParsedMerchant());
+                    } catch (Exception e) {
+                        log.warn("Auto-confirm failed for MailImport {}: {}", mailImportId, e.getMessage());
+                    }
+                });
+    }
+
+    private MailImportDTO confirmInternal(MailImport mailImport, MailImportConfirmDTO dto, User user) throws ChangeSetPersister.NotFoundException {
         String description = dto.getDescription() != null ? dto.getDescription() : mailImport.getParsedMerchant();
         LocalDate date = mailImport.getParsedDate() != null ? mailImport.getParsedDate() : LocalDate.now();
 
@@ -111,7 +136,7 @@ public class MailImportService implements IMailImportService {
             saveBinding(mailImport, description, null, debtPm);
             mailImport.setStatus(MailImportStatus.CONFIRMED);
             MailImport saved = mailImportRepository.save(mailImport);
-            log.debug("MailImport {} confirmed as Debt (creditor={})", id, mailImport.getSenderEntity());
+            log.debug("MailImport {} confirmed as Debt (creditor={})", mailImport.getId(), mailImport.getSenderEntity());
             return modelMapper.map(saved, MailImportDTO.class);
         }
 
@@ -150,7 +175,7 @@ public class MailImportService implements IMailImportService {
         mailImport.getExpense().setId(createdExpense.getId());
 
         MailImport saved = mailImportRepository.save(mailImport);
-        log.debug("MailImport {} confirmed, Expense {} created", id, createdExpense.getId());
+        log.debug("MailImport {} confirmed, Expense {} created", mailImport.getId(), createdExpense.getId());
         return modelMapper.map(saved, MailImportDTO.class);
     }
 

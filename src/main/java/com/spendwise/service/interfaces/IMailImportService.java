@@ -16,5 +16,6 @@ public interface IMailImportService {
     MailImportDTO ignore(Long id) throws ChangeSetPersister.NotFoundException;
     long getPendingCount();
     MerchantBindingDTO lookupBinding(String merchant);
+    void autoConfirmIfBound(Long mailImportId);
 
 }

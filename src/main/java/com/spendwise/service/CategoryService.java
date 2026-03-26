@@ -37,6 +37,7 @@ public class CategoryService implements ICategoryService {
     public void populate(Category category, CategoryDTO dto) {
         category.setName(dto.getName());
         category.setType(dto.getType());
+        category.setIcon(dto.getIcon());
     }
 
     @Transactional
