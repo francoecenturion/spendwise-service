@@ -13,6 +13,7 @@ import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.RecurrentExpense;
 import com.spendwise.model.RecurrentExpenseRecord;
 import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.RecurrentExpenseRecordRepository;
 import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.service.interfaces.IExpenseService;
@@ -44,6 +45,7 @@ public class ExpenseService implements IExpenseService {
     private final DolarApiHistoricalClient dolarApiHistoricalClient;
 
     private final ExpenseRepository expenseRespository;
+    private final MailImportRepository mailImportRepository;
     private final RecurrentExpenseRepository recurrentExpenseRepository;
     private final RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
 
@@ -53,13 +55,15 @@ public class ExpenseService implements IExpenseService {
         DolarApiClient dolarApiClient,
         DolarApiHistoricalClient dolarApiHistoricalClient,
         RecurrentExpenseRepository recurrentExpenseRepository,
-        RecurrentExpenseRecordRepository recurrentExpenseRecordRepository
+        RecurrentExpenseRecordRepository recurrentExpenseRecordRepository,
+        MailImportRepository mailImportRepository
     ) {
         this.expenseRespository = expenseRespository;
         this.dolarApiClient = dolarApiClient;
         this.dolarApiHistoricalClient = dolarApiHistoricalClient;
         this.recurrentExpenseRepository = recurrentExpenseRepository;
         this.recurrentExpenseRecordRepository = recurrentExpenseRecordRepository;
+        this.mailImportRepository = mailImportRepository;
     }
 
     @Override
@@ -167,6 +171,10 @@ public class ExpenseService implements IExpenseService {
     @Override
     public ExpenseDTO delete(Long id) throws ChangeSetPersister.NotFoundException {
         Expense category = find(id);
+        mailImportRepository.findByExpense(category).ifPresent(m -> {
+            m.setExpense(null);
+            mailImportRepository.save(m);
+        });
         expenseRespository.delete(category);
         log.debug("Expense with id {} deleted successfully", category.getId());
         return modelMapper.map(category, ExpenseDTO.class);

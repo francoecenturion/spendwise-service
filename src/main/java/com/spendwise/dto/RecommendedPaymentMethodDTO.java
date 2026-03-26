@@ -6,8 +6,7 @@ import lombok.Data;
 public class RecommendedPaymentMethodDTO {
     private Long id;
     private String name;
-    private String imageUrl;
+    private String iconUrl;
     private String paymentMethodType;
     private Long recommendedEntityId;
-    private Integer displayOrder;
 }

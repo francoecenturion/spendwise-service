@@ -61,4 +61,16 @@ public class AuthController {
         authService.deleteAccount();
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Si el email está registrado, recibirás un enlace para restablecer tu contraseña."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> body) {
+        authService.resetPassword(body.get("token"), body.get("newPassword"));
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente."));
+    }
 }

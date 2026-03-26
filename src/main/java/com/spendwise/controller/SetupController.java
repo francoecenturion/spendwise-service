@@ -39,12 +39,12 @@ public class SetupController {
                 .map(c -> modelMapper.map(c, RecommendedCurrencyDTO.class))
                 .toList();
 
-        List<RecommendedEntityDTO> entities = entityRepo.findAllByOrderByDisplayOrderAsc()
+        List<RecommendedEntityDTO> entities = entityRepo.findAllByOrderByIdAsc()
                 .stream()
                 .map(e -> modelMapper.map(e, RecommendedEntityDTO.class))
                 .toList();
 
-        List<RecommendedPaymentMethodDTO> paymentMethods = pmRepo.findAllByOrderByDisplayOrderAsc()
+        List<RecommendedPaymentMethodDTO> paymentMethods = pmRepo.findAllByOrderByIdAsc()
                 .stream()
                 .map(pm -> {
                     RecommendedPaymentMethodDTO dto = modelMapper.map(pm, RecommendedPaymentMethodDTO.class);

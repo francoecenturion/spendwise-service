@@ -12,6 +12,8 @@ public class IncomeDTO {
     private String description;
     private BigDecimal amountInPesos;
     private BigDecimal amountInDollars;
+    private BigDecimal inputAmount;
+    private CurrencyDTO currency;
     private CategoryDTO source;
     private LocalDate date;
 

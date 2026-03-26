@@ -1,9 +1,5 @@
 package com.spendwise.unittest;
 
-import com.spendwise.client.dolarApi.DolarApiClient;
-import com.spendwise.client.dolarApi.DolarApiDTO;
-import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalClient;
-import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.SavingDTO;
 import com.spendwise.dto.SavingFilterDTO;
 import com.spendwise.model.Currency;
@@ -32,7 +28,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,12 +46,6 @@ public class SavingServiceTest {
 
     @Mock
     private SavingRepository savingRespository;
-
-    @Mock
-    private DolarApiClient dolarApiClient;
-
-    @Mock
-    private DolarApiHistoricalClient dolarApiHistoricalClient;
 
     @InjectMocks
     private SavingService savingService;
@@ -95,13 +84,11 @@ public class SavingServiceTest {
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Create saving with a past date uses DolarApiHistoricalClient to calculate dollars")
+    @DisplayName("Create saving in pesos stores amountInPesos and sets amountInDollars to null")
     public void testCreateWithPastDate() {
         // Arrange
         LocalDate pastDate = LocalDate.of(2024, 6, 15);
         BigDecimal amountInPesos = new BigDecimal("500000");
-        BigDecimal sellingPrice = new BigDecimal("900");
-        BigDecimal expectedDollars = amountInPesos.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
 
         SavingDTO dto = new SavingDTO();
         dto.setDescription("Ahorro junio");
@@ -109,11 +96,6 @@ public class SavingServiceTest {
         dto.setCurrency(currency);
         dto.setDate(pastDate);
 
-        DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
-        historicalDTO.setSellingPrice(sellingPrice);
-
-        Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString()))
-                .thenReturn(historicalDTO);
         Mockito.when(savingRespository.save(any(Saving.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -123,30 +105,28 @@ public class SavingServiceTest {
         // Assert
         assertEquals("Ahorro junio", result.getDescription());
         assertEquals(amountInPesos, result.getAmountInPesos());
-        assertEquals(expectedDollars, result.getAmountInDollars());
-        Mockito.verify(dolarApiHistoricalClient).getRate("oficial", pastDate.toString());
+        assertNull(result.getAmountInDollars());
         Mockito.verify(savingRespository).save(any(Saving.class));
+        Mockito.verifyNoMoreInteractions(savingRespository);
     }
 
     @Test
-    @DisplayName("Create saving with today's date uses DolarApiClient to calculate dollars")
+    @DisplayName("Create saving in dollars stores amountInDollars and sets amountInPesos to null")
     public void testCreateWithTodaysDate() {
         // Arrange
-        LocalDate today = LocalDate.now();
-        BigDecimal amountInPesos = new BigDecimal("300000");
-        BigDecimal sellingPrice = new BigDecimal("1200");
-        BigDecimal expectedDollars = amountInPesos.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
+        Currency usdCurrency = new Currency();
+        usdCurrency.setId(2L);
+        usdCurrency.setName("Dólar");
+        usdCurrency.setSymbol("US$");
+
+        BigDecimal amountInDollars = new BigDecimal("300");
 
         SavingDTO dto = new SavingDTO();
-        dto.setDescription("Ahorro hoy");
-        dto.setInputAmount(amountInPesos);
-        dto.setCurrency(currency);
-        dto.setDate(today);
+        dto.setDescription("Ahorro en dólares");
+        dto.setInputAmount(amountInDollars);
+        dto.setCurrency(usdCurrency);
+        dto.setDate(LocalDate.now());
 
-        DolarApiDTO dolarApiDTO = new DolarApiDTO();
-        dolarApiDTO.setSellingPrice(sellingPrice);
-
-        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
         Mockito.when(savingRespository.save(any(Saving.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -154,11 +134,11 @@ public class SavingServiceTest {
         SavingDTO result = savingService.create(dto);
 
         // Assert
-        assertEquals("Ahorro hoy", result.getDescription());
-        assertEquals(amountInPesos, result.getAmountInPesos());
-        assertEquals(expectedDollars, result.getAmountInDollars());
-        Mockito.verify(dolarApiClient).getRate("oficial");
+        assertEquals("Ahorro en dólares", result.getDescription());
+        assertEquals(amountInDollars, result.getAmountInDollars());
+        assertNull(result.getAmountInPesos());
         Mockito.verify(savingRespository).save(any(Saving.class));
+        Mockito.verifyNoMoreInteractions(savingRespository);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -501,14 +481,12 @@ public class SavingServiceTest {
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Update saving recalculates amountInDollars via historical API")
+    @DisplayName("Update saving in pesos stores new amountInPesos and sets amountInDollars to null")
     public void testUpdate() throws Exception {
         // Arrange
         Long id = 1L;
         LocalDate pastDate = LocalDate.of(2024, 6, 1);
         BigDecimal newAmount = new BigDecimal("900000");
-        BigDecimal sellingPrice = new BigDecimal("1000");
-        BigDecimal expectedDollars = newAmount.divide(sellingPrice, 4, RoundingMode.HALF_EVEN);
 
         Saving existing = new Saving();
         existing.setId(id);
@@ -523,12 +501,7 @@ public class SavingServiceTest {
         updateDTO.setCurrency(currency);
         updateDTO.setDate(pastDate);
 
-        DolarApiHistoricalDTO historicalDTO = new DolarApiHistoricalDTO();
-        historicalDTO.setSellingPrice(sellingPrice);
-
         Mockito.when(savingRespository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(existing));
-        Mockito.when(dolarApiHistoricalClient.getRate("oficial", pastDate.toString()))
-                .thenReturn(historicalDTO);
         Mockito.when(savingRespository.save(any(Saving.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -538,9 +511,10 @@ public class SavingServiceTest {
         // Assert
         assertEquals("Ahorro actualizado", result.getDescription());
         assertEquals(newAmount, result.getAmountInPesos());
-        assertEquals(expectedDollars, result.getAmountInDollars());
+        assertNull(result.getAmountInDollars());
         Mockito.verify(savingRespository).findByIdAndUser(id, testUser);
         Mockito.verify(savingRespository).save(any(Saving.class));
+        Mockito.verifyNoMoreInteractions(savingRespository);
     }
 
     // ──────────────────────────────────────────────────────────────────────────

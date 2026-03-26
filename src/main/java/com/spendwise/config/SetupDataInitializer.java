@@ -65,11 +65,10 @@ public class SetupDataInitializer {
         };
 
         Map<String, RecommendedEntity> entityMap = new LinkedHashMap<>();
-        for (int i = 0; i < entityNames.length; i++) {
+        for (String entityName : entityNames) {
             RecommendedEntity e = new RecommendedEntity();
-            e.setName(entityNames[i]);
-            e.setDisplayOrder(i + 1);
-            entityMap.put(entityNames[i], entityRepo.save(e));
+            e.setName(entityName);
+            entityMap.put(entityName, entityRepo.save(e));
         }
 
         // ── Payment methods ───────────────────────────────────────────────────
@@ -103,12 +102,11 @@ public class SetupDataInitializer {
             { "Personal Pay Débito",           PaymentMethodType.DEBIT_CARD,  "Personal Pay" },
         };
 
-        for (int i = 0; i < pmData.length; i++) {
+        for (Object[] pmDatum : pmData) {
             RecommendedPaymentMethod pm = new RecommendedPaymentMethod();
-            pm.setName((String) pmData[i][0]);
-            pm.setPaymentMethodType((PaymentMethodType) pmData[i][1]);
-            pm.setDisplayOrder(i + 1);
-            String entityName = (String) pmData[i][2];
+            pm.setName((String) pmDatum[0]);
+            pm.setPaymentMethodType((PaymentMethodType) pmDatum[1]);
+            String entityName = (String) pmDatum[2];
             if (entityName != null) pm.setEntity(entityMap.get(entityName));
             pmRepo.save(pm);
         }

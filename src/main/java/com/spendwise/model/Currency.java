@@ -14,7 +14,7 @@ public class Currency extends BaseEntity {
     @Column(name = "NAME")
     private String name;
 
-    @Column(name = "SYMBOL", length = 1)
+    @Column(name = "SYMBOL", length = 3)
     private String symbol;
 
     @Column(name = "ENABLED")
@@ -22,6 +22,9 @@ public class Currency extends BaseEntity {
 
     @Column(name = "IS_DEFAULT")
     private Boolean isDefault;
+
+    @Column(name = "ICON", length = 2048)
+    private String icon;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID")

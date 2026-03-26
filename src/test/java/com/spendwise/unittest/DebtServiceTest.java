@@ -1,10 +1,12 @@
 package com.spendwise.unittest;
 
+import com.spendwise.dto.CurrencyDTO;
 import com.spendwise.dto.DebtDTO;
 import com.spendwise.dto.DebtFilterDTO;
 import com.spendwise.dto.IssuingEntityDTO;
 import com.spendwise.dto.PaymentMethodDTO;
 import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.model.Currency;
 import com.spendwise.model.Debt;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
@@ -498,6 +500,49 @@ public class DebtServiceTest {
         Mockito.verify(debtRepository).findByIdAndUser(id, testUser);
         Mockito.verify(debtRepository).delete(debt);
         Mockito.verifyNoMoreInteractions(debtRepository);
+    }
+
+    @Test
+    @DisplayName("Create debt with USD currency stores amount in dollars only, no conversion")
+    public void testCreateDebtWithCurrency() {
+        // Arrange
+        Currency usdCurrency = new Currency();
+        usdCurrency.setId(2L);
+        usdCurrency.setName("Dolar");
+        usdCurrency.setSymbol("US$");
+
+        CurrencyDTO currencyDTO = modelMapper.map(usdCurrency, CurrencyDTO.class);
+
+        DebtDTO dto = new DebtDTO();
+        dto.setDescription("Deuda en dólares");
+        dto.setInputAmount(BigDecimal.valueOf(100));
+        dto.setCurrency(currencyDTO);
+        dto.setDate(LocalDate.now());
+        dto.setPersonal(true);
+        dto.setCreditor("Juan Pérez");
+
+        Debt saved = new Debt();
+        saved.setId(5L);
+        saved.setDescription("Deuda en dólares");
+        saved.setAmountInDollars(BigDecimal.valueOf(100));
+        saved.setAmountInPesos(null);
+        saved.setDate(LocalDate.now());
+        saved.setPersonal(true);
+        saved.setCreditor("Juan Pérez");
+        saved.setCancelled(false);
+        saved.setCurrency(usdCurrency);
+
+        Mockito.when(debtRepository.save(any(Debt.class))).thenReturn(saved);
+
+        // Act
+        DebtDTO result = debtService.create(dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Deuda en dólares", result.getDescription());
+        assertEquals(BigDecimal.valueOf(100), result.getAmountInDollars());
+        assertNull(result.getAmountInPesos());
+        Mockito.verify(debtRepository).save(any(Debt.class));
     }
 
     @Test

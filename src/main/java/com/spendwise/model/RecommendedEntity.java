@@ -13,10 +13,7 @@ public class RecommendedEntity extends BaseEntity {
     @Column(name = "NAME")
     private String name;
 
-    @Column(name = "IMAGE_URL", length = 500)
-    private String imageUrl;
-
-    @Column(name = "DISPLAY_ORDER")
-    private Integer displayOrder;
+    @Column(name = "ICON_URL", length = 500)
+    private String iconUrl;
 
 }

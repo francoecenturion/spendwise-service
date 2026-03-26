@@ -29,9 +29,6 @@ public class PaymentMethod extends BaseEntity {
     @JoinColumn(name = "ISSUING_ENTITY_ID")
     private IssuingEntity issuingEntity;
 
-    @Column(name = "BRAND")
-    private String brand;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID")
     private User user;

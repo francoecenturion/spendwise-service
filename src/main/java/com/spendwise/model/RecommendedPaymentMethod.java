@@ -14,8 +14,8 @@ public class RecommendedPaymentMethod extends BaseEntity {
     @Column(name = "NAME")
     private String name;
 
-    @Column(name = "IMAGE_URL", length = 500)
-    private String imageUrl;
+    @Column(name = "ICON_URL", length = 500)
+    private String iconUrl;
 
     @Enumerated
     @Column(name = "PAYMENT_METHOD_TYPE")
@@ -24,8 +24,5 @@ public class RecommendedPaymentMethod extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RECOMMENDED_ENTITY_ID")
     private RecommendedEntity entity;
-
-    @Column(name = "DISPLAY_ORDER")
-    private Integer displayOrder;
 
 }

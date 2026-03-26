@@ -27,6 +27,10 @@ public class Income extends BaseEntity {
     @JoinColumn(name = "SOURCE_ID")
     private Category source;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CURRENCY_ID")
+    private Currency currency;
+
     @Column(name = "DATE")
     private LocalDate date;
 

@@ -11,5 +11,6 @@ public class CurrencyDTO  {
     private String symbol;
     private Boolean enabled;
     private Boolean isDefault;
+    private String icon;
 
 }

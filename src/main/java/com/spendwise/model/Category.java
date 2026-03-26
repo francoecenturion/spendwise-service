@@ -18,6 +18,9 @@ public class Category extends BaseEntity {
     @Column(name = "ENABLED")
     private Boolean enabled;
 
+    @Column(name = "ICON", length = 2048)
+    private String icon;
+
     @Column(name = "TYPE")
     @Enumerated(EnumType.STRING)
     private CategoryType type;

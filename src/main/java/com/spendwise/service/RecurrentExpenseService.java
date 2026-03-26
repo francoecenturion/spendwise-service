@@ -4,7 +4,6 @@ import com.spendwise.dto.RecurrentExpenseDTO;
 import com.spendwise.dto.RecurrentExpenseFilterDTO;
 import com.spendwise.model.Category;
 import com.spendwise.model.Currency;
-import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.RecurrentExpense;
 import com.spendwise.model.auth.User;
 import com.spendwise.repository.RecurrentExpenseRepository;
@@ -38,18 +37,30 @@ public class RecurrentExpenseService implements IRecurrentExpenseService {
     public void populate(RecurrentExpense recurrentExpense, RecurrentExpenseDTO dto) {
         recurrentExpense.setDescription(dto.getDescription());
         recurrentExpense.setIcon(dto.getIcon());
-        recurrentExpense.setAmountInPesos(dto.getAmountInPesos());
-        recurrentExpense.setAmountInDollars(dto.getAmountInDollars());
         recurrentExpense.setDayOfMonth(dto.getDayOfMonth());
         if (dto.getCategory() != null) {
             recurrentExpense.setCategory(modelMapper.map(dto.getCategory(), Category.class));
         }
-        if (dto.getPaymentMethod() != null) {
-            recurrentExpense.setPaymentMethod(modelMapper.map(dto.getPaymentMethod(), PaymentMethod.class));
-        }
         if (dto.getCurrency() != null) {
-            recurrentExpense.setCurrency(modelMapper.map(dto.getCurrency(), Currency.class));
+            Currency currency = modelMapper.map(dto.getCurrency(), Currency.class);
+            recurrentExpense.setCurrency(currency);
+            if (isPesosCurrency(currency)) {
+                recurrentExpense.setAmountInPesos(dto.getAmountInPesos());
+                recurrentExpense.setAmountInDollars(null);
+            } else {
+                recurrentExpense.setAmountInDollars(dto.getAmountInDollars());
+                recurrentExpense.setAmountInPesos(null);
+            }
+        } else {
+            recurrentExpense.setAmountInPesos(dto.getAmountInPesos());
+            recurrentExpense.setAmountInDollars(null);
         }
+    }
+
+    private boolean isPesosCurrency(Currency currency) {
+        if (currency == null || currency.getName() == null) return true;
+        String name = currency.getName().toLowerCase();
+        return name.contains("peso") || name.contains("ars") || name.contains("argentino");
     }
 
     @Transactional

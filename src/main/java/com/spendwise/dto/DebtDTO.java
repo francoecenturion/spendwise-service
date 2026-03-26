@@ -19,5 +19,7 @@ public class DebtDTO {
     private String creditor;
     private IssuingEntityDTO issuingEntity;
     private PaymentMethodDTO paymentMethod;
+    private CurrencyDTO currency;
+    private BigDecimal inputAmount;
 
 }

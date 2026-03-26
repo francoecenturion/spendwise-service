@@ -3,6 +3,7 @@ package com.spendwise.service;
 import com.spendwise.dto.SavingsWalletDTO;
 import com.spendwise.dto.SavingsWalletFilterDTO;
 import com.spendwise.enums.SavingsWalletType;
+import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.SavingsWallet;
 import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.service.interfaces.ISavingsWalletService;
@@ -39,6 +40,11 @@ public class SavingsWalletService implements ISavingsWalletService {
         savingsWallet.setName(dto.getName());
         savingsWallet.setSavingsWalletType(SavingsWalletType.valueOf(dto.getSavingsWalletType()));
         savingsWallet.setIcon(dto.getIcon());
+        if (dto.getIssuingEntity() != null && dto.getIssuingEntity().getId() != null) {
+            savingsWallet.setIssuingEntity(modelMapper.map(dto.getIssuingEntity(), IssuingEntity.class));
+        } else {
+            savingsWallet.setIssuingEntity(null);
+        }
     }
 
     @Transactional

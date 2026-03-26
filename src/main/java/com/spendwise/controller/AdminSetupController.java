@@ -73,7 +73,7 @@ public class AdminSetupController {
 
     @GetMapping("/recommended-entities")
     public List<RecommendedEntityDTO> listEntities() {
-        return entityRepo.findAllByOrderByDisplayOrderAsc().stream()
+        return entityRepo.findAllByOrderByIdAsc().stream()
                 .map(this::toEntityDTO)
                 .toList();
     }
@@ -82,8 +82,7 @@ public class AdminSetupController {
     public RecommendedEntityDTO createEntity(@RequestBody RecommendedEntityDTO dto) {
         RecommendedEntity e = new RecommendedEntity();
         e.setName(dto.getName());
-        e.setImageUrl(dto.getImageUrl());
-        e.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 999);
+        e.setIconUrl(dto.getIconUrl());
         return toEntityDTO(entityRepo.save(e));
     }
 
@@ -92,8 +91,7 @@ public class AdminSetupController {
                                                               @RequestBody RecommendedEntityDTO dto) {
         return entityRepo.findById(id).map(e -> {
             if (dto.getName() != null) e.setName(dto.getName());
-            if (dto.getImageUrl() != null) e.setImageUrl(dto.getImageUrl());
-            if (dto.getDisplayOrder() != null) e.setDisplayOrder(dto.getDisplayOrder());
+            if (dto.getIconUrl() != null) e.setIconUrl(dto.getIconUrl());
             return ResponseEntity.ok(toEntityDTO(entityRepo.save(e)));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -109,7 +107,7 @@ public class AdminSetupController {
 
     @GetMapping("/recommended-payment-methods")
     public List<RecommendedPaymentMethodDTO> listPaymentMethods() {
-        return pmRepo.findAllByOrderByDisplayOrderAsc().stream()
+        return pmRepo.findAllByOrderByIdAsc().stream()
                 .map(this::toPmDTO)
                 .toList();
     }
@@ -118,8 +116,7 @@ public class AdminSetupController {
     public RecommendedPaymentMethodDTO createPaymentMethod(@RequestBody RecommendedPaymentMethodDTO dto) {
         RecommendedPaymentMethod pm = new RecommendedPaymentMethod();
         pm.setName(dto.getName());
-        pm.setImageUrl(dto.getImageUrl());
-        pm.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 999);
+        pm.setIconUrl(dto.getIconUrl());
         if (dto.getPaymentMethodType() != null) {
             pm.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
         }
@@ -134,8 +131,7 @@ public class AdminSetupController {
                                                                             @RequestBody RecommendedPaymentMethodDTO dto) {
         return pmRepo.findById(id).map(pm -> {
             if (dto.getName() != null) pm.setName(dto.getName());
-            if (dto.getImageUrl() != null) pm.setImageUrl(dto.getImageUrl());
-            if (dto.getDisplayOrder() != null) pm.setDisplayOrder(dto.getDisplayOrder());
+            if (dto.getIconUrl() != null) pm.setIconUrl(dto.getIconUrl());
             if (dto.getPaymentMethodType() != null) {
                 pm.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
             }
@@ -171,8 +167,7 @@ public class AdminSetupController {
         RecommendedEntityDTO dto = new RecommendedEntityDTO();
         dto.setId(e.getId());
         dto.setName(e.getName());
-        dto.setImageUrl(e.getImageUrl());
-        dto.setDisplayOrder(e.getDisplayOrder());
+        dto.setIconUrl(e.getIconUrl());
         return dto;
     }
 
@@ -180,8 +175,7 @@ public class AdminSetupController {
         RecommendedPaymentMethodDTO dto = new RecommendedPaymentMethodDTO();
         dto.setId(pm.getId());
         dto.setName(pm.getName());
-        dto.setImageUrl(pm.getImageUrl());
-        dto.setDisplayOrder(pm.getDisplayOrder());
+        dto.setIconUrl(pm.getIconUrl());
         if (pm.getPaymentMethodType() != null) {
             dto.setPaymentMethodType(pm.getPaymentMethodType().name());
         }

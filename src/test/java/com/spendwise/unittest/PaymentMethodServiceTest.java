@@ -115,14 +115,14 @@ public class PaymentMethodServiceTest {
         paymentMethodDTO.setName("Galicia Mastercard");
         paymentMethodDTO.setPaymentMethodType("CREDIT_CARD");
         paymentMethodDTO.setIssuingEntity(issuingEntityDTO);
-        paymentMethodDTO.setBrand("Mastercard");
+        paymentMethodDTO.setIcon("Mastercard");
         paymentMethodDTO.setEnabled(true);
 
         PaymentMethod paymentMethod = new PaymentMethod();
         paymentMethod.setName("Galicia Mastercard");
         paymentMethod.setPaymentMethodType(PaymentMethodType.CREDIT_CARD);
         paymentMethod.setIssuingEntity(issuingEntity);
-        paymentMethod.setBrand("Mastercard");
+        paymentMethod.setIcon("Mastercard");
         paymentMethod.setEnabled(true);
 
         // Act
@@ -132,7 +132,7 @@ public class PaymentMethodServiceTest {
 
         // Assert
         assertEquals("Banco Galicia", obtained.getIssuingEntity().getDescription());
-        assertEquals("Mastercard", obtained.getBrand());
+        assertEquals("Mastercard", obtained.getIcon());
         Mockito.verify(issuingEntityRepository).findById(1L);
         Mockito.verify(paymentMethodRepository).save(any(PaymentMethod.class));
         Mockito.verifyNoMoreInteractions(paymentMethodRepository, issuingEntityRepository);

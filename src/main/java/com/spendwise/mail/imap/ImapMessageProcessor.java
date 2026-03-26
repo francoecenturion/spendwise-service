@@ -7,6 +7,7 @@ import com.spendwise.mail.parser.ParsedExpense;
 import com.spendwise.model.MailImport;
 import com.spendwise.model.auth.User;
 import com.spendwise.repository.MailImportRepository;
+import com.spendwise.service.interfaces.IMailImportService;
 import jakarta.mail.*;
 import jakarta.mail.internet.MimeMultipart;
 import org.slf4j.Logger;
@@ -25,12 +26,15 @@ public class ImapMessageProcessor {
 
     private final MailImportRepository mailImportRepository;
     private final MailParserRegistry parserRegistry;
+    private final IMailImportService mailImportService;
 
     @Autowired
     public ImapMessageProcessor(MailImportRepository mailImportRepository,
-                                MailParserRegistry parserRegistry) {
+                                MailParserRegistry parserRegistry,
+                                IMailImportService mailImportService) {
         this.mailImportRepository = mailImportRepository;
         this.parserRegistry = parserRegistry;
+        this.mailImportService = mailImportService;
     }
 
     public void process(Message message, User user) {
@@ -89,7 +93,10 @@ public class ImapMessageProcessor {
                 return;
             }
 
-            mailImportRepository.save(mailImport);
+            MailImport saved = mailImportRepository.save(mailImport);
+
+            // Auto-confirm if this merchant was seen before
+            mailImportService.autoConfirmIfBound(saved.getId());
 
             // Mark as SEEN to avoid reprocessing on reconnect
             message.setFlag(Flags.Flag.SEEN, true);

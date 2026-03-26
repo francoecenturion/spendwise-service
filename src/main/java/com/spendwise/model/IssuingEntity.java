@@ -17,7 +17,7 @@ public class IssuingEntity extends BaseEntity {
     @Column(name = "ENABLED")
     private Boolean enabled;
 
-    @Column(name = "ICON", length = 500)
+    @Column(name = "ICON", length = 2048)
     private String icon;
 
     @ManyToOne(fetch = FetchType.LAZY)
