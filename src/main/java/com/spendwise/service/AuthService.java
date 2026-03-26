@@ -2,6 +2,8 @@ package com.spendwise.service;
 
 import com.spendwise.dto.CurrencyDTO;
 import com.spendwise.dto.RegisterWithSetupDTO;
+import com.spendwise.enums.CategoryType;
+import com.spendwise.model.Category;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
@@ -14,6 +16,7 @@ import com.spendwise.model.RecommendedPaymentMethod;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
 import com.spendwise.model.auth.PasswordResetToken;
+import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PasswordResetTokenRepository;
@@ -59,6 +62,7 @@ public class AuthService implements IAuthService {
     private final RecommendedEntityRepository recommendedEntityRepository;
     private final RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final CategoryRepository categoryRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -75,7 +79,8 @@ public class AuthService implements IAuthService {
                        PaymentMethodRepository paymentMethodRepository,
                        RecommendedEntityRepository recommendedEntityRepository,
                        RecommendedPaymentMethodRepository recommendedPaymentMethodRepository,
-                       PasswordResetTokenRepository passwordResetTokenRepository) {
+                       PasswordResetTokenRepository passwordResetTokenRepository,
+                       CategoryRepository categoryRepository) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -88,6 +93,7 @@ public class AuthService implements IAuthService {
         this.recommendedEntityRepository = recommendedEntityRepository;
         this.recommendedPaymentMethodRepository = recommendedPaymentMethodRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -166,6 +172,36 @@ public class AuthService implements IAuthService {
                     paymentMethodRepository.save(pm);
                 });
             }
+        }
+
+        // ── Create default categories ─────────────────────────────────────────
+        Object[][] defaultCategories = {
+            { "Víveres",         "ShoppingCart",  CategoryType.EXPENSE     },
+            { "Restaurantes",    "Utensils",      CategoryType.EXPENSE     },
+            { "Transporte",      "Car",           CategoryType.EXPENSE     },
+            { "Hogar",           "Home",          CategoryType.EXPENSE     },
+            { "Servicios",       "Zap",           CategoryType.EXPENSE     },
+            { "Salud",           "Pill",          CategoryType.EXPENSE     },
+            { "Entretenimiento", "Gamepad2",      CategoryType.EXPENSE     },
+            { "Ropa",            "Shirt",         CategoryType.EXPENSE     },
+            { "Tecnología",      "Laptop",        CategoryType.EXPENSE     },
+            { "Educación",       "BookOpen",      CategoryType.EXPENSE     },
+            { "Café / Salidas",  "Coffee",        CategoryType.EXPENSE     },
+            { "Mascotas",        "PawPrint",      CategoryType.EXPENSE     },
+            { "Sueldo",          "Wallet",        CategoryType.INCOME      },
+            { "Freelance",       "Globe",         CategoryType.INCOME      },
+            { "Alquiler",        "Building2",     CategoryType.INCOME      },
+            { "Ahorro personal", "Star",          CategoryType.SAVING      },
+            { "Inversiones",     "TrendingUp",    CategoryType.INVESTMENT  },
+        };
+        for (Object[] row : defaultCategories) {
+            Category cat = new Category();
+            cat.setName((String) row[0]);
+            cat.setIcon((String) row[1]);
+            cat.setType((CategoryType) row[2]);
+            cat.setEnabled(true);
+            cat.setUser(user);
+            categoryRepository.save(cat);
         }
 
         // ── Send verification email ───────────────────────────────────────────
