@@ -5,16 +5,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class YearlySummaryDTO {
-    private int year;
+public class MonthlySummaryDTO {
+    private int month;
     private BigDecimal expensesARS;
     private BigDecimal expensesUSD;
     private BigDecimal incomeARS;
     private BigDecimal incomeUSD;
-    private List<MonthlySummaryDTO> months;
 }

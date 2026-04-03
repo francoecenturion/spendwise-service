@@ -2,8 +2,10 @@ package com.spendwise.service;
 
 import com.spendwise.dto.CurrencyDTO;
 import com.spendwise.dto.RegisterWithSetupDTO;
-import com.spendwise.enums.CategoryType;
+import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.Category;
+import com.spendwise.model.RecommendedCategory;
+import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
@@ -43,6 +45,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -63,6 +66,7 @@ public class AuthService implements IAuthService {
     private final RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CategoryRepository categoryRepository;
+    private final RecommendedCategoryRepository recommendedCategoryRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -80,7 +84,8 @@ public class AuthService implements IAuthService {
                        RecommendedEntityRepository recommendedEntityRepository,
                        RecommendedPaymentMethodRepository recommendedPaymentMethodRepository,
                        PasswordResetTokenRepository passwordResetTokenRepository,
-                       CategoryRepository categoryRepository) {
+                       CategoryRepository categoryRepository,
+                       RecommendedCategoryRepository recommendedCategoryRepository) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -94,6 +99,7 @@ public class AuthService implements IAuthService {
         this.recommendedPaymentMethodRepository = recommendedPaymentMethodRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.categoryRepository = categoryRepository;
+        this.recommendedCategoryRepository = recommendedCategoryRepository;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -156,9 +162,26 @@ public class AuthService implements IAuthService {
         }
 
         // ── Create payment methods ────────────────────────────────────────────
+        // Always create generic Efectivo and Transferencia bancaria
+        List<RecommendedPaymentMethod> defaultPms = recommendedPaymentMethodRepository
+                .findByEntityIsNullAndPaymentMethodTypeIn(List.of(PaymentMethodType.CASH, PaymentMethodType.TRANSFER));
+        Set<Long> defaultPmIds = new java.util.HashSet<>();
+        for (RecommendedPaymentMethod rec : defaultPms) {
+            PaymentMethod pm = new PaymentMethod();
+            pm.setName(rec.getName());
+            pm.setIcon(rec.getIconUrl());
+            pm.setPaymentMethodType(rec.getPaymentMethodType());
+            pm.setEnabled(true);
+            pm.setUser(user);
+            paymentMethodRepository.save(pm);
+            defaultPmIds.add(rec.getId());
+        }
+
+        // Create user-selected payment methods (skip any already created above)
         List<Long> selectedPmIds = dto.getSelectedPaymentMethodIds();
         if (selectedPmIds != null) {
             for (Long pmId : selectedPmIds) {
+                if (defaultPmIds.contains(pmId)) continue;
                 recommendedPaymentMethodRepository.findById(pmId).ifPresent(rec -> {
                     PaymentMethod pm = new PaymentMethod();
                     pm.setName(rec.getName());
@@ -174,31 +197,13 @@ public class AuthService implements IAuthService {
             }
         }
 
-        // ── Create default categories ─────────────────────────────────────────
-        Object[][] defaultCategories = {
-            { "Víveres",         "ShoppingCart",  CategoryType.EXPENSE     },
-            { "Restaurantes",    "Utensils",      CategoryType.EXPENSE     },
-            { "Transporte",      "Car",           CategoryType.EXPENSE     },
-            { "Hogar",           "Home",          CategoryType.EXPENSE     },
-            { "Servicios",       "Zap",           CategoryType.EXPENSE     },
-            { "Salud",           "Pill",          CategoryType.EXPENSE     },
-            { "Entretenimiento", "Gamepad2",      CategoryType.EXPENSE     },
-            { "Ropa",            "Shirt",         CategoryType.EXPENSE     },
-            { "Tecnología",      "Laptop",        CategoryType.EXPENSE     },
-            { "Educación",       "BookOpen",      CategoryType.EXPENSE     },
-            { "Café / Salidas",  "Coffee",        CategoryType.EXPENSE     },
-            { "Mascotas",        "PawPrint",      CategoryType.EXPENSE     },
-            { "Sueldo",          "Wallet",        CategoryType.INCOME      },
-            { "Freelance",       "Globe",         CategoryType.INCOME      },
-            { "Alquiler",        "Building2",     CategoryType.INCOME      },
-            { "Ahorro personal", "Star",          CategoryType.SAVING      },
-            { "Inversiones",     "TrendingUp",    CategoryType.INVESTMENT  },
-        };
-        for (Object[] row : defaultCategories) {
+        // ── Create default categories from recommended list ───────────────────
+        List<RecommendedCategory> recommendedCategories = recommendedCategoryRepository.findAllByOrderByDisplayOrderAsc();
+        for (RecommendedCategory rec : recommendedCategories) {
             Category cat = new Category();
-            cat.setName((String) row[0]);
-            cat.setIcon((String) row[1]);
-            cat.setType((CategoryType) row[2]);
+            cat.setName(rec.getName());
+            cat.setIcon(rec.getIcon());
+            cat.setType(rec.getType());
             cat.setEnabled(true);
             cat.setUser(user);
             categoryRepository.save(cat);

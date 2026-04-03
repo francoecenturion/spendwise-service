@@ -17,4 +17,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
 
     @Query("SELECT year(e.date), SUM(e.amountInPesos), SUM(e.amountInDollars) FROM Expense e WHERE e.user = :user GROUP BY year(e.date) ORDER BY year(e.date) DESC")
     List<Object[]> getYearlySums(@Param("user") User user);
+
+    @Query("SELECT year(e.date), month(e.date), SUM(e.amountInPesos), SUM(e.amountInDollars) FROM Expense e WHERE e.user = :user GROUP BY year(e.date), month(e.date) ORDER BY year(e.date) DESC, month(e.date) ASC")
+    List<Object[]> getMonthlySums(@Param("user") User user);
 }
