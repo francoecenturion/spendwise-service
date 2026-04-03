@@ -1,12 +1,16 @@
 package com.spendwise.controller;
 
+import com.spendwise.dto.RecommendedCategoryDTO;
 import com.spendwise.dto.RecommendedCurrencyDTO;
 import com.spendwise.dto.RecommendedEntityDTO;
 import com.spendwise.dto.RecommendedPaymentMethodDTO;
+import com.spendwise.enums.CategoryType;
 import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.model.RecommendedCategory;
 import com.spendwise.model.RecommendedCurrency;
 import com.spendwise.model.RecommendedEntity;
 import com.spendwise.model.RecommendedPaymentMethod;
+import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.repository.RecommendedCurrencyRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
 import com.spendwise.repository.RecommendedPaymentMethodRepository;
@@ -22,13 +26,16 @@ public class AdminSetupController {
     private final RecommendedCurrencyRepository currencyRepo;
     private final RecommendedEntityRepository entityRepo;
     private final RecommendedPaymentMethodRepository pmRepo;
+    private final RecommendedCategoryRepository categoryRepo;
 
     public AdminSetupController(RecommendedCurrencyRepository currencyRepo,
                                 RecommendedEntityRepository entityRepo,
-                                RecommendedPaymentMethodRepository pmRepo) {
+                                RecommendedPaymentMethodRepository pmRepo,
+                                RecommendedCategoryRepository categoryRepo) {
         this.currencyRepo = currencyRepo;
         this.entityRepo = entityRepo;
         this.pmRepo = pmRepo;
+        this.categoryRepo = categoryRepo;
     }
 
     // ── Recommended Currencies ────────────────────────────────────────────────
@@ -151,6 +158,44 @@ public class AdminSetupController {
         return ResponseEntity.noContent().build();
     }
 
+    // ── Recommended Categories ───────────────────────────────────────────────
+
+    @GetMapping("/recommended-categories")
+    public List<RecommendedCategoryDTO> listCategories() {
+        return categoryRepo.findAllByOrderByDisplayOrderAsc().stream()
+                .map(this::toCategoryDTO)
+                .toList();
+    }
+
+    @PostMapping("/recommended-categories")
+    public RecommendedCategoryDTO createCategory(@RequestBody RecommendedCategoryDTO dto) {
+        RecommendedCategory cat = new RecommendedCategory();
+        cat.setName(dto.getName());
+        cat.setIcon(dto.getIcon());
+        if (dto.getType() != null) cat.setType(CategoryType.valueOf(dto.getType()));
+        cat.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 999);
+        return toCategoryDTO(categoryRepo.save(cat));
+    }
+
+    @PutMapping("/recommended-categories/{id}")
+    public ResponseEntity<RecommendedCategoryDTO> updateCategory(@PathVariable Long id,
+                                                                  @RequestBody RecommendedCategoryDTO dto) {
+        return categoryRepo.findById(id).map(cat -> {
+            if (dto.getName() != null) cat.setName(dto.getName());
+            if (dto.getIcon() != null) cat.setIcon(dto.getIcon());
+            if (dto.getType() != null) cat.setType(CategoryType.valueOf(dto.getType()));
+            if (dto.getDisplayOrder() != null) cat.setDisplayOrder(dto.getDisplayOrder());
+            return ResponseEntity.ok(toCategoryDTO(categoryRepo.save(cat)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/recommended-categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        if (!categoryRepo.existsById(id)) return ResponseEntity.notFound().build();
+        categoryRepo.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Mappers ──────────────────────────────────────────────────────────────
 
     private RecommendedCurrencyDTO toCurrencyDTO(RecommendedCurrency c) {
@@ -168,6 +213,16 @@ public class AdminSetupController {
         dto.setId(e.getId());
         dto.setName(e.getName());
         dto.setIconUrl(e.getIconUrl());
+        return dto;
+    }
+
+    private RecommendedCategoryDTO toCategoryDTO(RecommendedCategory cat) {
+        RecommendedCategoryDTO dto = new RecommendedCategoryDTO();
+        dto.setId(cat.getId());
+        dto.setName(cat.getName());
+        dto.setIcon(cat.getIcon());
+        if (cat.getType() != null) dto.setType(cat.getType().name());
+        dto.setDisplayOrder(cat.getDisplayOrder());
         return dto;
     }
 

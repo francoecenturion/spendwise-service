@@ -1,11 +1,14 @@
 package com.spendwise.config;
 
+import com.spendwise.enums.CategoryType;
 import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.enums.Role;
+import com.spendwise.model.RecommendedCategory;
 import com.spendwise.model.RecommendedCurrency;
 import com.spendwise.model.RecommendedEntity;
 import com.spendwise.model.RecommendedPaymentMethod;
 import com.spendwise.model.auth.User;
+import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.repository.RecommendedCurrencyRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
 import com.spendwise.repository.RecommendedPaymentMethodRepository;
@@ -30,6 +33,7 @@ public class SetupDataInitializer {
     private final RecommendedEntityRepository entityRepo;
     private final RecommendedPaymentMethodRepository pmRepo;
     private final RecommendedCurrencyRepository currencyRepo;
+    private final RecommendedCategoryRepository categoryRepo;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -39,11 +43,13 @@ public class SetupDataInitializer {
     public SetupDataInitializer(RecommendedEntityRepository entityRepo,
                                 RecommendedPaymentMethodRepository pmRepo,
                                 RecommendedCurrencyRepository currencyRepo,
+                                RecommendedCategoryRepository categoryRepo,
                                 UserRepository userRepository,
                                 PasswordEncoder passwordEncoder) {
         this.entityRepo = entityRepo;
         this.pmRepo = pmRepo;
         this.currencyRepo = currencyRepo;
+        this.categoryRepo = categoryRepo;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -53,6 +59,7 @@ public class SetupDataInitializer {
     public void init() {
         seedAdminUser();
         seedCurrencies();
+        seedCategories();
         if (entityRepo.count() > 0) return;
 
         log.info("Seeding recommended entities and payment methods...");
@@ -133,6 +140,41 @@ public class SetupDataInitializer {
         }
 
         log.info("Seeded {} recommended currencies", currencies.length);
+    }
+
+    private void seedCategories() {
+        if (categoryRepo.count() > 0) return;
+
+        Object[][] defaultCategories = {
+            { "Víveres",         "ShoppingCart",  CategoryType.EXPENSE,     1  },
+            { "Restaurantes",    "Utensils",      CategoryType.EXPENSE,     2  },
+            { "Transporte",      "Car",           CategoryType.EXPENSE,     3  },
+            { "Hogar",           "Home",          CategoryType.EXPENSE,     4  },
+            { "Servicios",       "Zap",           CategoryType.EXPENSE,     5  },
+            { "Salud",           "Pill",          CategoryType.EXPENSE,     6  },
+            { "Entretenimiento", "Gamepad2",      CategoryType.EXPENSE,     7  },
+            { "Ropa",            "Shirt",         CategoryType.EXPENSE,     8  },
+            { "Tecnología",      "Laptop",        CategoryType.EXPENSE,     9  },
+            { "Educación",       "BookOpen",      CategoryType.EXPENSE,     10 },
+            { "Café / Salidas",  "Coffee",        CategoryType.EXPENSE,     11 },
+            { "Mascotas",        "PawPrint",      CategoryType.EXPENSE,     12 },
+            { "Sueldo",          "Wallet",        CategoryType.INCOME,      13 },
+            { "Freelance",       "Globe",         CategoryType.INCOME,      14 },
+            { "Alquiler",        "Building2",     CategoryType.INCOME,      15 },
+            { "Ahorro personal", "Star",          CategoryType.SAVING,      16 },
+            { "Inversiones",     "TrendingUp",    CategoryType.INVESTMENT,  17 },
+        };
+
+        for (Object[] row : defaultCategories) {
+            RecommendedCategory cat = new RecommendedCategory();
+            cat.setName((String) row[0]);
+            cat.setIcon((String) row[1]);
+            cat.setType((CategoryType) row[2]);
+            cat.setDisplayOrder((Integer) row[3]);
+            categoryRepo.save(cat);
+        }
+
+        log.info("Seeded {} recommended categories", defaultCategories.length);
     }
 
     private void seedAdminUser() {
