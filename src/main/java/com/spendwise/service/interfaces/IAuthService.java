@@ -11,6 +11,8 @@ public interface IAuthService {
     String register(RegisterWithSetupDTO dto);
     String verifyEmail(String token);
     AuthResponseDTO login(LoginRequestDTO dto);
+    AuthResponseDTO refresh(String refreshToken);
+    void logout(String refreshToken);
     UserDTO getProfile();
     UserDTO updateProfile(UpdateProfileDTO dto);
     void deleteAccount();

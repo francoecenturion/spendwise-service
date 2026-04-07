@@ -67,6 +67,7 @@ public class AuthService implements IAuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CategoryRepository categoryRepository;
     private final RecommendedCategoryRepository recommendedCategoryRepository;
+    private final RefreshTokenService refreshTokenService;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -85,7 +86,8 @@ public class AuthService implements IAuthService {
                        RecommendedPaymentMethodRepository recommendedPaymentMethodRepository,
                        PasswordResetTokenRepository passwordResetTokenRepository,
                        CategoryRepository categoryRepository,
-                       RecommendedCategoryRepository recommendedCategoryRepository) {
+                       RecommendedCategoryRepository recommendedCategoryRepository,
+                       RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -100,6 +102,7 @@ public class AuthService implements IAuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.categoryRepository = categoryRepository;
         this.recommendedCategoryRepository = recommendedCategoryRepository;
+        this.refreshTokenService = refreshTokenService;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -267,10 +270,34 @@ public class AuthService implements IAuthService {
         }
 
         String token = jwtUtil.generateToken(user);
+        String refreshToken = refreshTokenService.create(user).getToken();
         log.debug("User {} logged in successfully", user.getEmail());
         String roleName = user.getRole() != null ? user.getRole().name() : "USER";
-        return new AuthResponseDTO(token, user.getEmail(), user.getName(),
+        return new AuthResponseDTO(token, refreshToken, user.getEmail(), user.getName(),
                 user.getSurname(), user.getProfilePicture(), roleName);
+    }
+
+    // ── Refresh ───────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public AuthResponseDTO refresh(String refreshToken) {
+        var rt = refreshTokenService.verify(refreshToken);
+        User user = rt.getUser();
+        // Rotate: delete old, issue new
+        refreshTokenService.delete(refreshToken);
+        String newRefreshToken = refreshTokenService.create(user).getToken();
+        String newAccessToken = jwtUtil.generateToken(user);
+        String roleName = user.getRole() != null ? user.getRole().name() : "USER";
+        return new AuthResponseDTO(newAccessToken, newRefreshToken, user.getEmail(), user.getName(),
+                user.getSurname(), user.getProfilePicture(), roleName);
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+
+    @Override
+    public void logout(String refreshToken) {
+        refreshTokenService.delete(refreshToken);
     }
 
     // ── Profile ───────────────────────────────────────────────────────────────
@@ -312,6 +339,7 @@ public class AuthService implements IAuthService {
         User user = userRepository.findById(currentUser().getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        refreshTokenService.deleteAllForUser(user);
         user.setEnabled(false);
         userRepository.save(user);
         log.debug("Account disabled for user {}", user.getEmail());
