@@ -37,8 +37,11 @@ public class SetupDataInitializer {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${admin.password:admin123}")
+    @Value("${admin.password:12345678}")
     private String adminPassword;
+
+    @Value("${admin.email:admin@admin.com}")
+    private String adminEmail;
 
     public SetupDataInitializer(RecommendedEntityRepository entityRepo,
                                 RecommendedPaymentMethodRepository pmRepo,
@@ -178,7 +181,6 @@ public class SetupDataInitializer {
     }
 
     private void seedAdminUser() {
-        String adminEmail = "admin@spendwise.com";
         if (userRepository.findByEmail(adminEmail).isPresent()) return;
 
         User admin = new User();
