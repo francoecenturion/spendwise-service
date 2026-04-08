@@ -11,4 +11,5 @@ import java.util.Optional;
 @Repository
 public interface SavingRepository extends JpaRepository<Saving, Long>, JpaSpecificationExecutor<Saving> {
     Optional<Saving> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 }

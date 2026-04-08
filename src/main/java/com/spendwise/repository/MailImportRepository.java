@@ -15,4 +15,5 @@ public interface MailImportRepository extends JpaRepository<MailImport, Long>, J
     boolean existsByUserAndImapMessageId(User user, String imapMessageId);
     long countByUserAndStatus(User user, MailImportStatus status);
     Optional<MailImport> findByExpense(Expense expense);
+    void deleteAllByUser(User user);
 }

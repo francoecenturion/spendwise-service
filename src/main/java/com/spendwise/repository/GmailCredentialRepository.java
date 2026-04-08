@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface GmailCredentialRepository extends JpaRepository<GmailCredential, Long> {
     Optional<GmailCredential> findByUser(User user);
     List<GmailCredential> findAllByIsActiveTrue();
+    void deleteByUser(User user);
 }

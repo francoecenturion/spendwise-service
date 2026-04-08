@@ -18,13 +18,24 @@ import com.spendwise.model.RecommendedPaymentMethod;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
 import com.spendwise.model.auth.PasswordResetToken;
+import com.spendwise.repository.BudgetRepository;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
+import com.spendwise.repository.DebtRepository;
+import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.GmailCredentialRepository;
+import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.MailImportRepository;
+import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.PasswordResetTokenRepository;
 import com.spendwise.repository.PaymentMethodRepository;
+import com.spendwise.repository.RecurrentExpenseRecordRepository;
+import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
 import com.spendwise.repository.RecommendedPaymentMethodRepository;
+import com.spendwise.repository.SavingRepository;
+import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
@@ -68,6 +79,17 @@ public class AuthService implements IAuthService {
     private final CategoryRepository categoryRepository;
     private final RecommendedCategoryRepository recommendedCategoryRepository;
     private final RefreshTokenService refreshTokenService;
+    private final ExpenseRepository expenseRepository;
+    private final IncomeRepository incomeRepository;
+    private final DebtRepository debtRepository;
+    private final BudgetRepository budgetRepository;
+    private final SavingRepository savingRepository;
+    private final SavingsWalletRepository savingsWalletRepository;
+    private final RecurrentExpenseRepository recurrentExpenseRepository;
+    private final RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
+    private final MailImportRepository mailImportRepository;
+    private final MerchantBindingRepository merchantBindingRepository;
+    private final GmailCredentialRepository gmailCredentialRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -87,7 +109,18 @@ public class AuthService implements IAuthService {
                        PasswordResetTokenRepository passwordResetTokenRepository,
                        CategoryRepository categoryRepository,
                        RecommendedCategoryRepository recommendedCategoryRepository,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService,
+                       ExpenseRepository expenseRepository,
+                       IncomeRepository incomeRepository,
+                       DebtRepository debtRepository,
+                       BudgetRepository budgetRepository,
+                       SavingRepository savingRepository,
+                       SavingsWalletRepository savingsWalletRepository,
+                       RecurrentExpenseRepository recurrentExpenseRepository,
+                       RecurrentExpenseRecordRepository recurrentExpenseRecordRepository,
+                       MailImportRepository mailImportRepository,
+                       MerchantBindingRepository merchantBindingRepository,
+                       GmailCredentialRepository gmailCredentialRepository) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -103,6 +136,17 @@ public class AuthService implements IAuthService {
         this.categoryRepository = categoryRepository;
         this.recommendedCategoryRepository = recommendedCategoryRepository;
         this.refreshTokenService = refreshTokenService;
+        this.expenseRepository = expenseRepository;
+        this.incomeRepository = incomeRepository;
+        this.debtRepository = debtRepository;
+        this.budgetRepository = budgetRepository;
+        this.savingRepository = savingRepository;
+        this.savingsWalletRepository = savingsWalletRepository;
+        this.recurrentExpenseRepository = recurrentExpenseRepository;
+        this.recurrentExpenseRecordRepository = recurrentExpenseRecordRepository;
+        this.mailImportRepository = mailImportRepository;
+        this.merchantBindingRepository = merchantBindingRepository;
+        this.gmailCredentialRepository = gmailCredentialRepository;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -331,7 +375,7 @@ public class AuthService implements IAuthService {
         return modelMapper.map(saved, UserDTO.class);
     }
 
-    // ── Delete account (logical) ──────────────────────────────────────────────
+    // ── Delete account ────────────────────────────────────────────────────────
 
     @Transactional
     @Override
@@ -339,10 +383,28 @@ public class AuthService implements IAuthService {
         User user = userRepository.findById(currentUser().getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        // Delete in FK-safe order
+        recurrentExpenseRecordRepository.deleteAllByUser(user);
+        mailImportRepository.deleteAllByUser(user);
+        expenseRepository.deleteAllByUser(user);
+        recurrentExpenseRepository.deleteAllByUser(user);
+        incomeRepository.deleteAllByUser(user);
+        debtRepository.deleteAllByUser(user);
+        budgetRepository.deleteAllByUser(user);
+        merchantBindingRepository.deleteAllByUser(user);
+        savingRepository.deleteAllByUser(user);
+        savingsWalletRepository.deleteAllByUser(user);
+        paymentMethodRepository.deleteAllByUser(user);
+        issuingEntityRepository.deleteAllByUser(user);
+        categoryRepository.deleteAllByUser(user);
+        currencyRepository.deleteAllByUser(user);
+        gmailCredentialRepository.deleteByUser(user);
+        passwordResetTokenRepository.deleteByUser(user);
+        verificationTokenRepository.deleteByUser(user);
         refreshTokenService.deleteAllForUser(user);
-        user.setEnabled(false);
-        userRepository.save(user);
-        log.debug("Account disabled for user {}", user.getEmail());
+        userRepository.delete(user);
+
+        log.debug("Account permanently deleted for user {}", user.getEmail());
     }
 
     // ── Forgot password ───────────────────────────────────────────────────────

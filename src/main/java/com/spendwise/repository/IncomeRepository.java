@@ -14,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface IncomeRepository extends JpaRepository<Income, Long>, JpaSpecificationExecutor<Income> {
     Optional<Income> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 
     @Query("SELECT year(i.date), SUM(i.amountInPesos), SUM(i.amountInDollars) FROM Income i WHERE i.user = :user GROUP BY year(i.date) ORDER BY year(i.date) DESC")
     List<Object[]> getYearlySums(@Param("user") User user);
