@@ -14,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface CurrencyRepository extends JpaRepository<Currency, Long>, JpaSpecificationExecutor<Currency> {
     Optional<Currency> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 
     @Modifying
     @Query("UPDATE Currency c SET c.isDefault = false WHERE c.user = :user AND c.id <> :excludeId")

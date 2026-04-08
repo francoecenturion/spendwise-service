@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface MerchantBindingRepository extends JpaRepository<MerchantBinding, Long> {
     Optional<MerchantBinding> findByUserAndMerchantNameIgnoreCase(User user, String merchantName);
+    void deleteAllByUser(User user);
 }
