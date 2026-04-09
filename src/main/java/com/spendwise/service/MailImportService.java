@@ -111,7 +111,9 @@ public class MailImportService implements IMailImportService {
 
     private MailImportDTO confirmInternal(MailImport mailImport, MailImportConfirmDTO dto, User user) throws ChangeSetPersister.NotFoundException {
         String description = dto.getDescription() != null ? dto.getDescription() : mailImport.getParsedMerchant();
-        LocalDate date = mailImport.getParsedDate() != null ? mailImport.getParsedDate() : LocalDate.now();
+        LocalDate date = dto.getDate() != null ? dto.getDate()
+                : mailImport.getParsedDate() != null ? mailImport.getParsedDate()
+                : LocalDate.now();
 
         if (Boolean.TRUE.equals(mailImport.getParsedIsDebt())) {
             // ── Credit card payment → create Debt ───────────────────────────
