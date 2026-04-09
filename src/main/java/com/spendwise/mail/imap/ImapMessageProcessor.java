@@ -74,8 +74,17 @@ public class ImapMessageProcessor {
                 mailImport.setParsedMerchant(parsed.getMerchant());
                 mailImport.setParsedAmount(parsed.getAmount());
                 mailImport.setParsedCurrencySymbol(parsed.getCurrencySymbol());
-                mailImport.setParsedDate(parsed.getDate());
                 mailImport.setParsedIsDebt(parsed.isDebt());
+
+                // Use date from parser; fall back to mail sent date; then today
+                if (parsed.getDate() != null) {
+                    mailImport.setParsedDate(parsed.getDate());
+                } else if (message.getSentDate() != null) {
+                    mailImport.setParsedDate(message.getSentDate().toInstant()
+                            .atZone(ZoneId.systemDefault()).toLocalDate());
+                } else {
+                    mailImport.setParsedDate(java.time.LocalDate.now());
+                }
 
                 if (parsed.getCategoryId() != null) {
                     // Category found — create Expense (handled by MailImportService in confirm flow)
