@@ -1,6 +1,6 @@
 package com.spendwise.service;
 
-import com.spendwise.dto.DebtDTO;
+import com.spendwise.dto.CardExpenseDTO;
 import com.spendwise.dto.ExpenseDTO;
 import com.spendwise.dto.MailImportConfirmDTO;
 import com.spendwise.dto.MailImportDTO;
@@ -17,7 +17,7 @@ import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.PaymentMethodRepository;
-import com.spendwise.service.interfaces.IDebtService;
+import com.spendwise.service.interfaces.ICardExpenseService;
 import com.spendwise.service.interfaces.IExpenseService;
 import com.spendwise.service.interfaces.IMailImportService;
 import com.spendwise.spec.MailImportSpecification;
@@ -45,7 +45,7 @@ public class MailImportService implements IMailImportService {
     private final PaymentMethodRepository paymentMethodRepository;
     private final MerchantBindingRepository merchantBindingRepository;
     private final IExpenseService expenseService;
-    private final IDebtService debtService;
+    private final ICardExpenseService cardExpenseService;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Autowired
@@ -55,13 +55,13 @@ public class MailImportService implements IMailImportService {
             PaymentMethodRepository paymentMethodRepository,
             MerchantBindingRepository merchantBindingRepository,
             IExpenseService expenseService,
-            IDebtService debtService) {
+            ICardExpenseService cardExpenseService) {
         this.mailImportRepository = mailImportRepository;
         this.categoryRepository = categoryRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.merchantBindingRepository = merchantBindingRepository;
         this.expenseService = expenseService;
-        this.debtService = debtService;
+        this.cardExpenseService = cardExpenseService;
     }
 
     @Override
@@ -116,29 +116,27 @@ public class MailImportService implements IMailImportService {
                 : LocalDate.now();
 
         if (Boolean.TRUE.equals(mailImport.getParsedIsDebt())) {
-            // ── Credit card payment → create Debt ───────────────────────────
-            DebtDTO debtDTO = new DebtDTO();
-            debtDTO.setDescription(description);
-            debtDTO.setAmountInPesos(mailImport.getParsedAmount());
-            debtDTO.setDate(date);
-            debtDTO.setPersonal(true);
-            debtDTO.setCreditor(mailImport.getSenderEntity());
+            // ── Credit card payment → create CardExpense ─────────────────────
+            CardExpenseDTO cardExpenseDTO = new CardExpenseDTO();
+            cardExpenseDTO.setDescription(description);
+            cardExpenseDTO.setAmountInPesos(mailImport.getParsedAmount());
+            cardExpenseDTO.setDate(date);
 
-            PaymentMethod debtPm = null;
+            PaymentMethod cardPm = null;
             if (dto.getPaymentMethodId() != null) {
-                debtPm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
+                cardPm = paymentMethodRepository.findByIdAndUser(dto.getPaymentMethodId(), user)
                         .orElseThrow(ChangeSetPersister.NotFoundException::new);
                 PaymentMethodDTO pmDTO = new PaymentMethodDTO();
-                pmDTO.setId(debtPm.getId());
-                pmDTO.setName(debtPm.getName());
-                debtDTO.setPaymentMethod(pmDTO);
+                pmDTO.setId(cardPm.getId());
+                pmDTO.setName(cardPm.getName());
+                cardExpenseDTO.setPaymentMethod(pmDTO);
             }
 
-            debtService.create(debtDTO);
-            saveBinding(mailImport, description, null, debtPm);
+            cardExpenseService.create(cardExpenseDTO);
+            saveBinding(mailImport, description, null, cardPm);
             mailImport.setStatus(MailImportStatus.CONFIRMED);
             MailImport saved = mailImportRepository.save(mailImport);
-            log.debug("MailImport {} confirmed as Debt (creditor={})", mailImport.getId(), mailImport.getSenderEntity());
+            log.debug("MailImport {} confirmed as CardExpense (entity={})", mailImport.getId(), mailImport.getSenderEntity());
             return modelMapper.map(saved, MailImportDTO.class);
         }
 
