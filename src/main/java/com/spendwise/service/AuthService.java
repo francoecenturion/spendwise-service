@@ -21,7 +21,8 @@ import com.spendwise.model.auth.PasswordResetToken;
 import com.spendwise.repository.BudgetRepository;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
-import com.spendwise.repository.DebtRepository;
+import com.spendwise.repository.CardExpenseRepository;
+import com.spendwise.repository.PersonalDebtRepository;
 import com.spendwise.repository.ExpenseRepository;
 import com.spendwise.repository.GmailCredentialRepository;
 import com.spendwise.repository.IncomeRepository;
@@ -81,7 +82,8 @@ public class AuthService implements IAuthService {
     private final RefreshTokenService refreshTokenService;
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
-    private final DebtRepository debtRepository;
+    private final CardExpenseRepository cardExpenseRepository;
+    private final PersonalDebtRepository personalDebtRepository;
     private final BudgetRepository budgetRepository;
     private final SavingRepository savingRepository;
     private final SavingsWalletRepository savingsWalletRepository;
@@ -112,7 +114,8 @@ public class AuthService implements IAuthService {
                        RefreshTokenService refreshTokenService,
                        ExpenseRepository expenseRepository,
                        IncomeRepository incomeRepository,
-                       DebtRepository debtRepository,
+                       CardExpenseRepository cardExpenseRepository,
+                       PersonalDebtRepository personalDebtRepository,
                        BudgetRepository budgetRepository,
                        SavingRepository savingRepository,
                        SavingsWalletRepository savingsWalletRepository,
@@ -138,7 +141,8 @@ public class AuthService implements IAuthService {
         this.refreshTokenService = refreshTokenService;
         this.expenseRepository = expenseRepository;
         this.incomeRepository = incomeRepository;
-        this.debtRepository = debtRepository;
+        this.cardExpenseRepository = cardExpenseRepository;
+        this.personalDebtRepository = personalDebtRepository;
         this.budgetRepository = budgetRepository;
         this.savingRepository = savingRepository;
         this.savingsWalletRepository = savingsWalletRepository;
@@ -389,7 +393,8 @@ public class AuthService implements IAuthService {
         expenseRepository.deleteAllByUser(user);
         recurrentExpenseRepository.deleteAllByUser(user);
         incomeRepository.deleteAllByUser(user);
-        debtRepository.deleteAllByUser(user);
+        cardExpenseRepository.deleteAllByUser(user);
+        personalDebtRepository.deleteAllByUser(user);
         budgetRepository.deleteAllByUser(user);
         merchantBindingRepository.deleteAllByUser(user);
         savingRepository.deleteAllByUser(user);
