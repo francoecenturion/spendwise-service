@@ -4,6 +4,7 @@ import com.spendwise.client.dolarApi.DolarApiClient;
 import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalClient;
 import com.spendwise.client.dolarApi.DolarApiDTO;
 import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
+import org.springframework.web.client.HttpClientErrorException;
 import com.spendwise.dto.ExpenseDTO;
 import com.spendwise.dto.ExpenseFilterDTO;
 import com.spendwise.model.Category;
@@ -213,36 +214,24 @@ public class ExpenseService implements IExpenseService {
     }
 
     public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {
-
-        BigDecimal amountInDollars;
-
-        if(LocalDate.now().isEqual(date)) {
-            // Dolar Api
-            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
-            amountInDollars = amountInPesos.divide(dolarApiDTO.getSellingPrice(), 4, RoundingMode.HALF_EVEN);
-        } else {
-            // Dolar Api Historical
-            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
-            amountInDollars = amountInPesos.divide(dolarApiHistoricalDTO.getSellingPrice(), 4,  RoundingMode.HALF_EVEN);
-        }
-
-        return amountInDollars;
+        BigDecimal rate = fetchSellingRate(date);
+        return amountInPesos.divide(rate, 4, RoundingMode.HALF_EVEN);
     }
 
     public BigDecimal calculateAmountInPesos(BigDecimal amountInDollars, LocalDate date) {
+        BigDecimal rate = fetchSellingRate(date);
+        return amountInDollars.multiply(rate);
+    }
 
-        BigDecimal amountInPesos;
-
-        if(LocalDate.now().isEqual(date)) {
-            // Dolar Api
-            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
-            amountInPesos = amountInDollars.multiply(dolarApiDTO.getSellingPrice());
-        } else {
-            // Dolar Api Historical
-            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
-            amountInPesos = amountInDollars.multiply(dolarApiHistoricalDTO.getSellingPrice());
+    private BigDecimal fetchSellingRate(LocalDate date) {
+        if (LocalDate.now().isEqual(date)) {
+            return dolarApiClient.getRate("oficial").getSellingPrice();
         }
-
-        return amountInPesos;
+        try {
+            return dolarApiHistoricalClient.getRate("oficial", date.toString()).getSellingPrice();
+        } catch (HttpClientErrorException e) {
+            log.warn("Historical rate not available for date {}, falling back to current rate. Status: {}", date, e.getStatusCode());
+            return dolarApiClient.getRate("oficial").getSellingPrice();
+        }
     }
 }
