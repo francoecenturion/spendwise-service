@@ -41,6 +41,14 @@ public class IncomeSpecification {
                 predicates.add(cb.equal(root.get("date"), filters.getDate()));
             }
 
+            if (filters.getStartDate() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("date"), filters.getStartDate()));
+            }
+
+            if (filters.getEndDate() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("date"), filters.getEndDate()));
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }

@@ -15,4 +15,6 @@ public interface RecurrentExpenseRepository extends JpaRepository<RecurrentExpen
 
     Optional<RecurrentExpense> findByDescriptionIgnoreCaseAndUserAndEnabledTrue(String description, User user);
 
+    void deleteAllByUser(User user);
+
 }

@@ -15,7 +15,9 @@ import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.RecurrentExpense;
 import com.spendwise.model.RecurrentExpenseRecord;
+import com.spendwise.model.MailImport;
 import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.RecurrentExpenseRecordRepository;
 import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.service.ExpenseService;
@@ -72,6 +74,9 @@ public class ExpenseServiceTest {
 
     @Mock
     private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
+
+    @Mock
+    private MailImportRepository mailImportRepository;
 
     @InjectMocks
     private ExpenseService expenseService;

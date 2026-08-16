@@ -15,4 +15,6 @@ public interface BudgetRepository extends JpaRepository<Budget, Long>, JpaSpecif
 
     Optional<Budget> findTopByUserOrderByYearDescMonthDesc(User user);
 
+    void deleteAllByUser(User user);
+
 }

@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface IssuingEntityRepository extends JpaRepository<IssuingEntity, Long>,
         JpaSpecificationExecutor<IssuingEntity> {
     Optional<IssuingEntity> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 }

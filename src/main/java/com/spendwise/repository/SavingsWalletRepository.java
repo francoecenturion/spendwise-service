@@ -11,4 +11,5 @@ import java.util.Optional;
 @Repository
 public interface SavingsWalletRepository extends JpaRepository<SavingsWallet, Long>, JpaSpecificationExecutor<SavingsWallet> {
     Optional<SavingsWallet> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 }

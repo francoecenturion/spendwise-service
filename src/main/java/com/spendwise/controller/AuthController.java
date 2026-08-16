@@ -1,5 +1,6 @@
 package com.spendwise.controller;
 
+import com.spendwise.dto.RegisterWithSetupDTO;
 import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
@@ -25,7 +26,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody UserDTO dto) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterWithSetupDTO dto) {
         String message = authService.register(dto);
         log.debug("POST /auth/register finished for {}", dto.getEmail());
         return ResponseEntity.ok(Map.of("message", message));
@@ -59,5 +60,29 @@ public class AuthController {
     public ResponseEntity<Void> deleteAccount() {
         authService.deleteAccount();
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDTO> refresh(@RequestBody Map<String, String> body) {
+        AuthResponseDTO response = authService.refresh(body.get("refreshToken"));
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody Map<String, String> body) {
+        authService.logout(body.get("refreshToken"));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Si el email está registrado, recibirás un enlace para restablecer tu contraseña."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> body) {
+        authService.resetPassword(body.get("token"), body.get("newPassword"));
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente."));
     }
 }

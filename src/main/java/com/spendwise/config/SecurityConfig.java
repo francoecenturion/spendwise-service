@@ -3,6 +3,7 @@ package com.spendwise.config;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.security.JwtAuthenticationFilter;
 import com.spendwise.security.JwtUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -45,12 +46,17 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/auth/verify").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout", "/auth/forgot-password", "/auth/reset-password").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/verify", "/setup/recommendations").permitAll()
+                .requestMatchers("/h2-console/**", "/error", "/health").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(fo -> fo.sameOrigin())) // needed for H2 console
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+            )
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

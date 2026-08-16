@@ -1,0 +1,47 @@
+package com.spendwise.model;
+
+import com.spendwise.model.auth.User;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@EqualsAndHashCode(callSuper = true)
+@Entity
+@Table(name = "CARD_EXPENSE")
+@Data
+public class CardExpense extends BaseEntity {
+
+    @Column(name = "DESCRIPTION")
+    private String description;
+
+    @Column(name = "AMOUNT_ARS")
+    private BigDecimal amountInPesos;
+
+    @Column(name = "AMOUNT_USD")
+    private BigDecimal amountInDollars;
+
+    @Column(name = "DATE")
+    private LocalDate date;
+
+    @Column(name = "DUE_DATE")
+    private LocalDate dueDate;
+
+    @Column(name = "CANCELLED")
+    private Boolean cancelled;
+
+    @ManyToOne
+    @JoinColumn(name = "PAYMENT_METHOD_ID")
+    private PaymentMethod paymentMethod;
+
+    @ManyToOne
+    @JoinColumn(name = "CURRENCY_ID")
+    private Currency currency;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USER_ID")
+    private User user;
+
+}

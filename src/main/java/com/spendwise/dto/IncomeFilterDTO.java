@@ -14,5 +14,7 @@ public class IncomeFilterDTO {
     private BigDecimal amountInDollars;
     private CategoryDTO source;
     private LocalDate date;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
 }

@@ -7,6 +7,7 @@ import com.spendwise.client.dolarApiHistorical.DolarApiHistoricalDTO;
 import com.spendwise.dto.IncomeDTO;
 import com.spendwise.dto.IncomeFilterDTO;
 import com.spendwise.model.Category;
+import com.spendwise.model.Currency;
 import com.spendwise.model.Income;
 import com.spendwise.repository.IncomeRepository;
 import com.spendwise.service.interfaces.IIncomeService;
@@ -53,10 +54,30 @@ public class IncomeService implements IIncomeService {
     @Override
     public void populate(Income income, IncomeDTO dto) {
         income.setDescription(dto.getDescription());
-        income.setAmountInPesos(dto.getAmountInPesos());
-        income.setAmountInDollars(this.calculateAmountInDollars(dto.getAmountInPesos(), dto.getDate()));
         income.setSource(modelMapper.map(dto.getSource(), Category.class));
         income.setDate(dto.getDate());
+
+        if (dto.getCurrency() != null && dto.getCurrency().getId() != null) {
+            Currency currency = modelMapper.map(dto.getCurrency(), Currency.class);
+            income.setCurrency(currency);
+            BigDecimal inputAmount = dto.getInputAmount() != null ? dto.getInputAmount() : dto.getAmountInPesos();
+            if (isPesosCurrency(currency)) {
+                income.setAmountInPesos(inputAmount);
+                income.setAmountInDollars(this.calculateAmountInDollars(inputAmount, dto.getDate()));
+            } else {
+                income.setAmountInDollars(inputAmount);
+                income.setAmountInPesos(this.calculateAmountInPesos(inputAmount, dto.getDate()));
+            }
+        } else {
+            income.setAmountInPesos(dto.getAmountInPesos());
+            income.setAmountInDollars(this.calculateAmountInDollars(dto.getAmountInPesos(), dto.getDate()));
+        }
+    }
+
+    private boolean isPesosCurrency(Currency currency) {
+        if (currency == null || currency.getName() == null) return true;
+        String name = currency.getName().toLowerCase();
+        return name.contains("peso") || name.contains("ars") || name.contains("argentino");
     }
 
     @Transactional
@@ -121,19 +142,26 @@ public class IncomeService implements IIncomeService {
     }
 
     public BigDecimal calculateAmountInDollars(BigDecimal amountInPesos, LocalDate date) {
-
         BigDecimal amountInDollars;
-
-        if(LocalDate.now().isEqual(date)) {
-            // Dolar Api
+        if (LocalDate.now().isEqual(date)) {
             DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
             amountInDollars = amountInPesos.divide(dolarApiDTO.getSellingPrice(), 4, RoundingMode.HALF_EVEN);
         } else {
-            // Dolar Api Historical
             DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
-            amountInDollars = amountInPesos.divide(dolarApiHistoricalDTO.getSellingPrice(), 4,  RoundingMode.HALF_EVEN);
+            amountInDollars = amountInPesos.divide(dolarApiHistoricalDTO.getSellingPrice(), 4, RoundingMode.HALF_EVEN);
         }
-
         return amountInDollars;
+    }
+
+    public BigDecimal calculateAmountInPesos(BigDecimal amountInDollars, LocalDate date) {
+        BigDecimal amountInPesos;
+        if (LocalDate.now().isEqual(date)) {
+            DolarApiDTO dolarApiDTO = dolarApiClient.getRate("oficial");
+            amountInPesos = amountInDollars.multiply(dolarApiDTO.getSellingPrice());
+        } else {
+            DolarApiHistoricalDTO dolarApiHistoricalDTO = dolarApiHistoricalClient.getRate("oficial", date.toString());
+            amountInPesos = amountInDollars.multiply(dolarApiHistoricalDTO.getSellingPrice());
+        }
+        return amountInPesos;
     }
 }

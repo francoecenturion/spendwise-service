@@ -2,6 +2,7 @@ package com.spendwise.service;
 
 import com.spendwise.dto.DebtDTO;
 import com.spendwise.dto.DebtFilterDTO;
+import com.spendwise.model.Currency;
 import com.spendwise.model.Debt;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import com.spendwise.model.auth.User;
 
+import java.math.BigDecimal;
+
 @Service
 public class DebtService implements IDebtService {
 
@@ -38,8 +41,6 @@ public class DebtService implements IDebtService {
     @Override
     public void populate(Debt debt, DebtDTO dto) {
         debt.setDescription(dto.getDescription());
-        debt.setAmountInPesos(dto.getAmountInPesos());
-        debt.setAmountInDollars(dto.getAmountInDollars());
         debt.setDate(dto.getDate());
         debt.setDueDate(dto.getDueDate());
         debt.setPersonal(dto.getPersonal());
@@ -50,6 +51,28 @@ public class DebtService implements IDebtService {
         debt.setPaymentMethod(dto.getPaymentMethod() != null
                 ? modelMapper.map(dto.getPaymentMethod(), PaymentMethod.class)
                 : null);
+
+        if (dto.getCurrency() != null && dto.getCurrency().getId() != null) {
+            Currency currency = modelMapper.map(dto.getCurrency(), Currency.class);
+            debt.setCurrency(currency);
+            BigDecimal inputAmount = dto.getInputAmount() != null ? dto.getInputAmount() : dto.getAmountInPesos();
+            if (isPesosCurrency(currency)) {
+                debt.setAmountInPesos(inputAmount);
+                debt.setAmountInDollars(null);
+            } else {
+                debt.setAmountInDollars(inputAmount);
+                debt.setAmountInPesos(null);
+            }
+        } else {
+            debt.setAmountInPesos(dto.getAmountInPesos());
+            debt.setAmountInDollars(dto.getAmountInDollars());
+        }
+    }
+
+    private boolean isPesosCurrency(Currency currency) {
+        if (currency == null || currency.getName() == null) return true;
+        String name = currency.getName().toLowerCase();
+        return name.contains("peso") || name.contains("ars") || name.contains("argentino");
     }
 
     @Transactional

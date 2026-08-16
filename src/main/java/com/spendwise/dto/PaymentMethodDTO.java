@@ -11,5 +11,4 @@ public class PaymentMethodDTO {
     private Boolean enabled;
     private String icon;
     private IssuingEntityDTO issuingEntity;
-    private String brand;
 }

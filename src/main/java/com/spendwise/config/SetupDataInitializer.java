@@ -1,0 +1,197 @@
+package com.spendwise.config;
+
+import com.spendwise.enums.CategoryType;
+import com.spendwise.enums.PaymentMethodType;
+import com.spendwise.enums.Role;
+import com.spendwise.model.RecommendedCategory;
+import com.spendwise.model.RecommendedCurrency;
+import com.spendwise.model.RecommendedEntity;
+import com.spendwise.model.RecommendedPaymentMethod;
+import com.spendwise.model.auth.User;
+import com.spendwise.repository.RecommendedCategoryRepository;
+import com.spendwise.repository.RecommendedCurrencyRepository;
+import com.spendwise.repository.RecommendedEntityRepository;
+import com.spendwise.repository.RecommendedPaymentMethodRepository;
+import com.spendwise.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@Component
+public class SetupDataInitializer {
+
+    private static final Logger log = LoggerFactory.getLogger(SetupDataInitializer.class);
+
+    private final RecommendedEntityRepository entityRepo;
+    private final RecommendedPaymentMethodRepository pmRepo;
+    private final RecommendedCurrencyRepository currencyRepo;
+    private final RecommendedCategoryRepository categoryRepo;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${admin.password:12345678}")
+    private String adminPassword;
+
+    @Value("${admin.email:admin@admin.com}")
+    private String adminEmail;
+
+    public SetupDataInitializer(RecommendedEntityRepository entityRepo,
+                                RecommendedPaymentMethodRepository pmRepo,
+                                RecommendedCurrencyRepository currencyRepo,
+                                RecommendedCategoryRepository categoryRepo,
+                                UserRepository userRepository,
+                                PasswordEncoder passwordEncoder) {
+        this.entityRepo = entityRepo;
+        this.pmRepo = pmRepo;
+        this.currencyRepo = currencyRepo;
+        this.categoryRepo = categoryRepo;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void init() {
+        seedAdminUser();
+        seedCurrencies();
+        seedCategories();
+        if (entityRepo.count() > 0) return;
+
+        log.info("Seeding recommended entities and payment methods...");
+
+        // ── Entities ──────────────────────────────────────────────────────────
+        String[] entityNames = {
+            "Santander", "Banco Galicia", "Banco Nación", "BBVA",
+            "Banco Macro", "Banco Patagonia", "Brubank",
+            "Naranja X", "MercadoPago", "Ualá", "Personal Pay"
+        };
+
+        Map<String, RecommendedEntity> entityMap = new LinkedHashMap<>();
+        for (String entityName : entityNames) {
+            RecommendedEntity e = new RecommendedEntity();
+            e.setName(entityName);
+            entityMap.put(entityName, entityRepo.save(e));
+        }
+
+        // ── Payment methods ───────────────────────────────────────────────────
+        // { name, type, entityName (null = generic) }
+        Object[][] pmData = {
+            { "Efectivo",                     PaymentMethodType.CASH,        null           },
+            { "Transferencia bancaria",        PaymentMethodType.TRANSFER,    null           },
+            { "Santander Visa Débito",         PaymentMethodType.DEBIT_CARD,  "Santander"    },
+            { "Santander Visa Crédito",        PaymentMethodType.CREDIT_CARD, "Santander"    },
+            { "Santander Mastercard",          PaymentMethodType.CREDIT_CARD, "Santander"    },
+            { "Galicia Visa Débito",           PaymentMethodType.DEBIT_CARD,  "Banco Galicia"},
+            { "Galicia Visa Crédito",          PaymentMethodType.CREDIT_CARD, "Banco Galicia"},
+            { "Galicia Mastercard",            PaymentMethodType.CREDIT_CARD, "Banco Galicia"},
+            { "BNA Visa Débito",               PaymentMethodType.DEBIT_CARD,  "Banco Nación" },
+            { "BNA Mastercard",                PaymentMethodType.CREDIT_CARD, "Banco Nación" },
+            { "BBVA Visa Débito",              PaymentMethodType.DEBIT_CARD,  "BBVA"         },
+            { "BBVA Visa Crédito",             PaymentMethodType.CREDIT_CARD, "BBVA"         },
+            { "BBVA Mastercard",               PaymentMethodType.CREDIT_CARD, "BBVA"         },
+            { "Macro Visa Débito",             PaymentMethodType.DEBIT_CARD,  "Banco Macro"  },
+            { "Macro Visa Crédito",            PaymentMethodType.CREDIT_CARD, "Banco Macro"  },
+            { "Macro Mastercard",              PaymentMethodType.CREDIT_CARD, "Banco Macro"  },
+            { "Patagonia Visa Débito",         PaymentMethodType.DEBIT_CARD,  "Banco Patagonia"},
+            { "Patagonia Visa Crédito",        PaymentMethodType.CREDIT_CARD, "Banco Patagonia"},
+            { "Brubank Visa Débito",           PaymentMethodType.DEBIT_CARD,  "Brubank"      },
+            { "Naranja X Visa",                PaymentMethodType.CREDIT_CARD, "Naranja X"    },
+            { "Naranja X Mastercard",          PaymentMethodType.CREDIT_CARD, "Naranja X"    },
+            { "Mercado Pago",                  PaymentMethodType.TRANSFER,    "MercadoPago"  },
+            { "Ualá Mastercard",               PaymentMethodType.CREDIT_CARD, "Ualá"         },
+            { "Ualá Visa Débito",              PaymentMethodType.DEBIT_CARD,  "Ualá"         },
+            { "Personal Pay Visa",             PaymentMethodType.CREDIT_CARD, "Personal Pay" },
+            { "Personal Pay Débito",           PaymentMethodType.DEBIT_CARD,  "Personal Pay" },
+        };
+
+        for (Object[] pmDatum : pmData) {
+            RecommendedPaymentMethod pm = new RecommendedPaymentMethod();
+            pm.setName((String) pmDatum[0]);
+            pm.setPaymentMethodType((PaymentMethodType) pmDatum[1]);
+            String entityName = (String) pmDatum[2];
+            if (entityName != null) pm.setEntity(entityMap.get(entityName));
+            pmRepo.save(pm);
+        }
+
+        log.info("Seeded {} entities and {} payment methods", entityMap.size(), pmData.length);
+    }
+
+    private void seedCurrencies() {
+        if (currencyRepo.count() > 0) return;
+
+        Object[][] currencies = {
+            { "Peso Argentino",        "$",   1, true  },
+            { "Dólar Estadounidense",  "US$", 2, false },
+            { "Real Brasileño",        "R$",  3, false },
+        };
+
+        for (Object[] row : currencies) {
+            RecommendedCurrency c = new RecommendedCurrency();
+            c.setName((String) row[0]);
+            c.setSymbol((String) row[1]);
+            c.setDisplayOrder((Integer) row[2]);
+            c.setDefaultSelected((Boolean) row[3]);
+            currencyRepo.save(c);
+        }
+
+        log.info("Seeded {} recommended currencies", currencies.length);
+    }
+
+    private void seedCategories() {
+        if (categoryRepo.count() > 0) return;
+
+        Object[][] defaultCategories = {
+            { "Víveres",         "ShoppingCart",  CategoryType.EXPENSE,     1  },
+            { "Restaurantes",    "Utensils",      CategoryType.EXPENSE,     2  },
+            { "Transporte",      "Car",           CategoryType.EXPENSE,     3  },
+            { "Hogar",           "Home",          CategoryType.EXPENSE,     4  },
+            { "Servicios",       "Zap",           CategoryType.EXPENSE,     5  },
+            { "Salud",           "Pill",          CategoryType.EXPENSE,     6  },
+            { "Entretenimiento", "Gamepad2",      CategoryType.EXPENSE,     7  },
+            { "Ropa",            "Shirt",         CategoryType.EXPENSE,     8  },
+            { "Tecnología",      "Laptop",        CategoryType.EXPENSE,     9  },
+            { "Educación",       "BookOpen",      CategoryType.EXPENSE,     10 },
+            { "Café / Salidas",  "Coffee",        CategoryType.EXPENSE,     11 },
+            { "Mascotas",        "PawPrint",      CategoryType.EXPENSE,     12 },
+            { "Sueldo",          "Wallet",        CategoryType.INCOME,      13 },
+            { "Freelance",       "Globe",         CategoryType.INCOME,      14 },
+            { "Alquiler",        "Building2",     CategoryType.INCOME,      15 },
+            { "Ahorro personal", "Star",          CategoryType.SAVING,      16 },
+            { "Inversiones",     "TrendingUp",    CategoryType.INVESTMENT,  17 },
+        };
+
+        for (Object[] row : defaultCategories) {
+            RecommendedCategory cat = new RecommendedCategory();
+            cat.setName((String) row[0]);
+            cat.setIcon((String) row[1]);
+            cat.setType((CategoryType) row[2]);
+            cat.setDisplayOrder((Integer) row[3]);
+            categoryRepo.save(cat);
+        }
+
+        log.info("Seeded {} recommended categories", defaultCategories.length);
+    }
+
+    private void seedAdminUser() {
+        if (userRepository.findByEmail(adminEmail).isPresent()) return;
+
+        User admin = new User();
+        admin.setEmail(adminEmail);
+        admin.setName("Admin");
+        admin.setSurname("SpendWise");
+        admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+        admin.setRole(Role.ADMIN);
+        admin.setEnabled(true);
+        userRepository.save(admin);
+        log.info("Admin user created: {}", adminEmail);
+    }
+
+}

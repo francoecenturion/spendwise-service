@@ -25,12 +25,16 @@ public class UserService implements IUserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ModelMapper modelMapper = new ModelMapper();
+    private final ModelMapper modelMapper;
 
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.modelMapper = new ModelMapper();
+        // Prevent ModelMapper from mapping passwordHash → password via token matching
+        this.modelMapper.typeMap(User.class, UserDTO.class)
+                .addMappings(m -> m.skip(UserDTO::setPassword));
     }
 
     @Override

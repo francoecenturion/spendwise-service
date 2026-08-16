@@ -17,5 +17,7 @@ public interface ICurrencyService {
     CurrencyDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
     CurrencyDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
     CurrencyDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
+    CurrencyDTO setDefault(Long id) throws ChangeSetPersister.NotFoundException;
+    CurrencyDTO removeDefault(Long id) throws ChangeSetPersister.NotFoundException;
 
 }

@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface DebtRepository extends JpaRepository<Debt, Long>,
         JpaSpecificationExecutor<Debt> {
     Optional<Debt> findByIdAndUser(Long id, User user);
+    void deleteAllByUser(User user);
 }

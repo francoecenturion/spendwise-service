@@ -44,7 +44,6 @@ public class PaymentMethodService implements IPaymentMethodService {
         paymentMethod.setName(dto.getName());
         paymentMethod.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
         paymentMethod.setIcon(dto.getIcon());
-        paymentMethod.setBrand(dto.getBrand());
 
         if (dto.getIssuingEntity() != null && dto.getIssuingEntity().getId() != null) {
             IssuingEntity entity = issuingEntityRepository.findById(dto.getIssuingEntity().getId())

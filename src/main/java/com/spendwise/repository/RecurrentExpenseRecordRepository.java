@@ -16,4 +16,6 @@ public interface RecurrentExpenseRecordRepository extends JpaRepository<Recurren
 
     Optional<RecurrentExpenseRecord> findByRecurrentExpenseAndMonthAndYear(RecurrentExpense recurrentExpense, Integer month, Integer year);
 
+    void deleteAllByUser(User user);
+
 }
