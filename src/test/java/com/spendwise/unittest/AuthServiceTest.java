@@ -5,17 +5,31 @@ import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
 import com.spendwise.dto.auth.UpdateProfileDTO;
+import com.spendwise.model.auth.RefreshToken;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
+import com.spendwise.repository.BudgetRepository;
+import com.spendwise.repository.CardExpenseRepository;
+import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
+import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.PasswordResetTokenRepository;
 import com.spendwise.repository.PaymentMethodRepository;
+import com.spendwise.repository.PersonalDebtRepository;
+import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
 import com.spendwise.repository.RecommendedPaymentMethodRepository;
+import com.spendwise.repository.RecurrentExpenseRecordRepository;
+import com.spendwise.repository.RecurrentExpenseRepository;
+import com.spendwise.repository.SavingRepository;
+import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
 import com.spendwise.service.AuthService;
+import com.spendwise.service.RefreshTokenService;
 import com.spendwise.service.UserService;
 import com.spendwise.service.interfaces.IEmailService;
 import org.junit.jupiter.api.AfterEach;
@@ -77,6 +91,45 @@ public class AuthServiceTest {
 
     @Mock
     private RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private RecommendedCategoryRepository recommendedCategoryRepository;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private ExpenseRepository expenseRepository;
+
+    @Mock
+    private IncomeRepository incomeRepository;
+
+    @Mock
+    private CardExpenseRepository cardExpenseRepository;
+
+    @Mock
+    private PersonalDebtRepository personalDebtRepository;
+
+    @Mock
+    private BudgetRepository budgetRepository;
+
+    @Mock
+    private SavingRepository savingRepository;
+
+    @Mock
+    private SavingsWalletRepository savingsWalletRepository;
+
+    @Mock
+    private RecurrentExpenseRepository recurrentExpenseRepository;
+
+    @Mock
+    private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -265,20 +318,27 @@ public class AuthServiceTest {
         dto.setEmail("john@example.com");
         dto.setPassword("rawPassword");
 
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setUser(user);
+        refreshToken.setToken("mocked.refresh.token");
+
         Mockito.when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         Mockito.when(passwordEncoder.matches("rawPassword", "$2a$10$hashedPassword")).thenReturn(true);
         Mockito.when(jwtUtil.generateToken(user)).thenReturn("mocked.jwt.token");
+        Mockito.when(refreshTokenService.create(user)).thenReturn(refreshToken);
 
         // Act
         AuthResponseDTO result = authService.login(dto);
 
         // Assert
         assertEquals("mocked.jwt.token", result.getToken());
+        assertEquals("mocked.refresh.token", result.getRefreshToken());
         assertEquals("john@example.com", result.getEmail());
         assertEquals("John", result.getName());
         Mockito.verify(userRepository).findByEmail("john@example.com");
         Mockito.verify(passwordEncoder).matches("rawPassword", "$2a$10$hashedPassword");
         Mockito.verify(jwtUtil).generateToken(user);
+        Mockito.verify(refreshTokenService).create(user);
     }
 
     @Test
@@ -528,7 +588,7 @@ public class AuthServiceTest {
     // ───────────────────────── deleteAccount ─────────────────────────────────
 
     @Test
-    @DisplayName("deleteAccount sets enabled=false and saves the user")
+    @DisplayName("deleteAccount permanently deletes the user and all related data")
     public void testDeleteAccount() {
 
         // Arrange
@@ -536,15 +596,29 @@ public class AuthServiceTest {
         setSecurityContext(user);
 
         Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        Mockito.when(userRepository.save(user)).thenReturn(user);
 
         // Act
         authService.deleteAccount();
 
         // Assert
-        assertFalse(user.getEnabled(), "Account should be disabled after deletion");
         Mockito.verify(userRepository).findById(1L);
-        Mockito.verify(userRepository).save(user);
+        Mockito.verify(recurrentExpenseRecordRepository).deleteAllByUser(user);
+        Mockito.verify(expenseRepository).deleteAllByUser(user);
+        Mockito.verify(recurrentExpenseRepository).deleteAllByUser(user);
+        Mockito.verify(incomeRepository).deleteAllByUser(user);
+        Mockito.verify(cardExpenseRepository).deleteAllByUser(user);
+        Mockito.verify(personalDebtRepository).deleteAllByUser(user);
+        Mockito.verify(budgetRepository).deleteAllByUser(user);
+        Mockito.verify(savingRepository).deleteAllByUser(user);
+        Mockito.verify(savingsWalletRepository).deleteAllByUser(user);
+        Mockito.verify(paymentMethodRepository).deleteAllByUser(user);
+        Mockito.verify(issuingEntityRepository).deleteAllByUser(user);
+        Mockito.verify(categoryRepository).deleteAllByUser(user);
+        Mockito.verify(currencyRepository).deleteAllByUser(user);
+        Mockito.verify(passwordResetTokenRepository).deleteByUser(user);
+        Mockito.verify(verificationTokenRepository).deleteByUser(user);
+        Mockito.verify(refreshTokenService).deleteAllForUser(user);
+        Mockito.verify(userRepository).delete(user);
         Mockito.verifyNoMoreInteractions(userRepository);
     }
 

@@ -132,11 +132,6 @@
 			<version>3.1.0</version>
 		</dependency>
 
-		<!-- Jakarta Mail (IMAP IDLE) — versión gestionada por Spring Boot BOM -->
-		<dependency>
-			<groupId>org.eclipse.angus</groupId>
-			<artifactId>angus-mail</artifactId>
-		</dependency>
 	</dependencies>
 
 	<build>
