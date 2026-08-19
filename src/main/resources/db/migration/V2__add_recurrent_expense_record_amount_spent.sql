@@ -8,8 +8,9 @@
 -- template. See ExpenseService.autoCancelRecurrentExpense/
 -- reverseRecurrentExpenseAccumulation and BudgetService.toDTO.
 --
--- Run this once against the prod database (spring.jpa.hibernate.ddl-auto=none
--- there, so it will NOT be applied automatically like it is in dev).
+-- IF NOT EXISTS guards against re-applying this if it was already run by
+-- hand from migrations/2026-08-18_add-recurrent-expense-record-amount-spent.sql
+-- before Flyway was introduced.
 
 ALTER TABLE RECURRENT_EXPENSE_RECORD
     ADD COLUMN IF NOT EXISTS AMOUNT_SPENT_IN_PESOS NUMERIC(19, 2) NOT NULL DEFAULT 0,
