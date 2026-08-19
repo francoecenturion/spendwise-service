@@ -117,9 +117,8 @@ public class ExpenseService implements IExpenseService {
         recurrentExpenseRepository
                 .findByDescriptionIgnoreCaseAndUserAndEnabledTrue(savedExpense.getDescription(), user)
                 .ifPresent(recurrentExpense -> {
-                    LocalDate today = LocalDate.now();
-                    int month = today.getMonthValue();
-                    int year = today.getYear();
+                    int month = savedExpense.getDate().getMonthValue();
+                    int year = savedExpense.getDate().getYear();
 
                     RecurrentExpenseRecord record = recurrentExpenseRecordRepository
                             .findByRecurrentExpenseAndMonthAndYear(recurrentExpense, month, year)
@@ -129,16 +128,56 @@ public class ExpenseService implements IExpenseService {
                                 newRecord.setMonth(month);
                                 newRecord.setYear(year);
                                 newRecord.setUser(user);
+                                newRecord.setAmountSpentInPesos(BigDecimal.ZERO);
+                                newRecord.setAmountSpentInDollars(BigDecimal.ZERO);
                                 return newRecord;
                             });
 
+                    BigDecimal previousPesos = record.getAmountSpentInPesos() != null ? record.getAmountSpentInPesos() : BigDecimal.ZERO;
+                    BigDecimal previousDollars = record.getAmountSpentInDollars() != null ? record.getAmountSpentInDollars() : BigDecimal.ZERO;
+                    BigDecimal expensePesos = savedExpense.getAmountInPesos() != null ? savedExpense.getAmountInPesos() : BigDecimal.ZERO;
+                    BigDecimal expenseDollars = savedExpense.getAmountInDollars() != null ? savedExpense.getAmountInDollars() : BigDecimal.ZERO;
+
                     record.setCancelled(true);
                     record.setExpense(savedExpense);
+                    record.setAmountSpentInPesos(previousPesos.add(expensePesos));
+                    record.setAmountSpentInDollars(previousDollars.add(expenseDollars));
                     recurrentExpenseRecordRepository.save(record);
-                    log.debug("RecurrentExpenseRecord auto-cancelled for recurrentExpense id {} ({}/{})",
-                            recurrentExpense.getId(), month, year);
+                    log.debug("RecurrentExpenseRecord accumulated for recurrentExpense id {} ({}/{}): +ARS {} +USD {}",
+                            recurrentExpense.getId(), month, year, expensePesos, expenseDollars);
+                });
+    }
 
-                    syncAmountIfChanged(savedExpense, recurrentExpense);
+    /** Reverses the accumulation from autoCancelRecurrentExpense when the matching expense is deleted. */
+    private void reverseRecurrentExpenseAccumulation(Expense expense, User user) {
+        recurrentExpenseRepository
+                .findByDescriptionIgnoreCaseAndUserAndEnabledTrue(expense.getDescription(), user)
+                .ifPresent(recurrentExpense -> {
+                    int month = expense.getDate().getMonthValue();
+                    int year = expense.getDate().getYear();
+
+                    recurrentExpenseRecordRepository
+                            .findByRecurrentExpenseAndMonthAndYear(recurrentExpense, month, year)
+                            .ifPresent(record -> {
+                                BigDecimal expensePesos = expense.getAmountInPesos() != null ? expense.getAmountInPesos() : BigDecimal.ZERO;
+                                BigDecimal expenseDollars = expense.getAmountInDollars() != null ? expense.getAmountInDollars() : BigDecimal.ZERO;
+                                BigDecimal remainingPesos = (record.getAmountSpentInPesos() != null ? record.getAmountSpentInPesos() : BigDecimal.ZERO)
+                                        .subtract(expensePesos).max(BigDecimal.ZERO);
+                                BigDecimal remainingDollars = (record.getAmountSpentInDollars() != null ? record.getAmountSpentInDollars() : BigDecimal.ZERO)
+                                        .subtract(expenseDollars).max(BigDecimal.ZERO);
+
+                                record.setAmountSpentInPesos(remainingPesos);
+                                record.setAmountSpentInDollars(remainingDollars);
+                                if (remainingPesos.compareTo(BigDecimal.ZERO) == 0 && remainingDollars.compareTo(BigDecimal.ZERO) == 0) {
+                                    record.setCancelled(false);
+                                    if (record.getExpense() != null && record.getExpense().getId().equals(expense.getId())) {
+                                        record.setExpense(null);
+                                    }
+                                }
+                                recurrentExpenseRecordRepository.save(record);
+                                log.debug("RecurrentExpenseRecord accumulation reversed for recurrentExpense id {} ({}/{}): -ARS {} -USD {}",
+                                        recurrentExpense.getId(), month, year, expensePesos, expenseDollars);
+                            });
                 });
     }
 
@@ -176,6 +215,7 @@ public class ExpenseService implements IExpenseService {
             m.setExpense(null);
             mailImportRepository.save(m);
         });
+        reverseRecurrentExpenseAccumulation(category, currentUser());
         expenseRespository.delete(category);
         log.debug("Expense with id {} deleted successfully", category.getId());
         return modelMapper.map(category, ExpenseDTO.class);
@@ -186,23 +226,6 @@ public class ExpenseService implements IExpenseService {
         return null;
     }
 
-
-    private void syncAmountIfChanged(Expense expense, RecurrentExpense recurrentExpense) {
-        boolean isPesos = isPesosCurrency(expense.getCurrency());
-
-        BigDecimal expenseAmount  = isPesos ? expense.getAmountInPesos() : expense.getAmountInDollars();
-        BigDecimal recurrentAmount = isPesos ? recurrentExpense.getAmountInPesos() : recurrentExpense.getAmountInDollars();
-
-        if (expenseAmount == null) return;
-
-        if (recurrentAmount == null || expenseAmount.compareTo(recurrentAmount) != 0) {
-            recurrentExpense.setAmountInPesos(expense.getAmountInPesos());
-            recurrentExpense.setAmountInDollars(expense.getAmountInDollars());
-            recurrentExpenseRepository.save(recurrentExpense);
-            log.debug("RecurrentExpense id {} amount updated to ARS={} USD={}",
-                    recurrentExpense.getId(), expense.getAmountInPesos(), expense.getAmountInDollars());
-        }
-    }
 
     protected Expense find(Long id) throws ChangeSetPersister.NotFoundException {
         return expenseRespository.findByIdAndUser(id, currentUser())

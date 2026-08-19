@@ -2,8 +2,11 @@ package com.spendwise.service;
 
 import com.spendwise.dto.IssuingEntityDTO;
 import com.spendwise.dto.IssuingEntityFilterDTO;
+import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.IssuingEntity;
+import com.spendwise.model.PaymentMethod;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.interfaces.IIssuingEntityService;
 import com.spendwise.spec.IssuingEntityEspecification;
 import jakarta.transaction.Transactional;
@@ -25,12 +28,20 @@ public class IssuingEntityService implements IIssuingEntityService {
 
     private static final Logger log = LoggerFactory.getLogger(IssuingEntityService.class);
 
+    /** Every entity automatically gets one payment method per type — no manual creation needed. */
+    private static final PaymentMethodType[] AUTO_PAYMENT_METHOD_TYPES = {
+        PaymentMethodType.QR, PaymentMethodType.TRANSFER, PaymentMethodType.DEBIT_CARD, PaymentMethodType.CREDIT_CARD
+    };
+
     private final IssuingEntityRepository issuingEntityRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Autowired
-    public IssuingEntityService(IssuingEntityRepository issuingEntityRepository) {
+    public IssuingEntityService(IssuingEntityRepository issuingEntityRepository,
+                                PaymentMethodRepository paymentMethodRepository) {
         this.issuingEntityRepository = issuingEntityRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
     }
 
     @Override
@@ -47,8 +58,32 @@ public class IssuingEntityService implements IIssuingEntityService {
         issuingEntity.setEnabled(true);
         issuingEntity.setUser(currentUser());
         IssuingEntity saved = issuingEntityRepository.save(issuingEntity);
+        createDefaultPaymentMethods(saved);
         log.debug("IssuingEntity with id {} created successfully", saved.getId());
         return modelMapper.map(saved, IssuingEntityDTO.class);
+    }
+
+    /** Creates the one-per-type payment methods for a newly created entity (QR/Transferencia/Débito/Crédito). */
+    private void createDefaultPaymentMethods(IssuingEntity entity) {
+        for (PaymentMethodType type : AUTO_PAYMENT_METHOD_TYPES) {
+            PaymentMethod pm = new PaymentMethod();
+            pm.setName(entity.getDescription() + " · " + paymentMethodTypeLabel(type));
+            pm.setPaymentMethodType(type);
+            pm.setEnabled(true);
+            pm.setUser(entity.getUser());
+            pm.setIssuingEntity(entity);
+            paymentMethodRepository.save(pm);
+        }
+    }
+
+    private String paymentMethodTypeLabel(PaymentMethodType type) {
+        return switch (type) {
+            case QR -> "QR";
+            case TRANSFER -> "Transferencia";
+            case DEBIT_CARD -> "Débito";
+            case CREDIT_CARD -> "Crédito";
+            case CASH -> "Efectivo";
+        };
     }
 
     @Transactional
@@ -81,6 +116,7 @@ public class IssuingEntityService implements IIssuingEntityService {
     @Override
     public IssuingEntityDTO delete(Long id) throws ChangeSetPersister.NotFoundException {
         IssuingEntity issuingEntity = find(id);
+        paymentMethodRepository.deleteAll(paymentMethodRepository.findByIssuingEntity(issuingEntity));
         issuingEntityRepository.delete(issuingEntity);
         log.debug("IssuingEntity with id {} deleted successfully", issuingEntity.getId());
         return modelMapper.map(issuingEntity, IssuingEntityDTO.class);

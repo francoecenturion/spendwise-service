@@ -17,5 +17,7 @@ public interface IPaymentMethodService {
     PaymentMethodDTO delete(Long id) throws ChangeSetPersister.NotFoundException;
     PaymentMethodDTO disable(Long id) throws ChangeSetPersister.NotFoundException;
     PaymentMethodDTO enable(Long id) throws ChangeSetPersister.NotFoundException;
+    PaymentMethodDTO setDefault(Long id) throws ChangeSetPersister.NotFoundException;
+    PaymentMethodDTO removeDefault(Long id) throws ChangeSetPersister.NotFoundException;
 
 }
