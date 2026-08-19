@@ -11,7 +11,6 @@ import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
-import com.spendwise.repository.RecommendedPaymentMethodRepository;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
@@ -74,9 +73,6 @@ public class AuthServiceTest {
 
     @Mock
     private RecommendedEntityRepository recommendedEntityRepository;
-
-    @Mock
-    private RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
 
     @InjectMocks
     private AuthService authService;

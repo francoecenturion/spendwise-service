@@ -21,6 +21,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 public class RecurrentExpenseRecordService implements IRecurrentExpenseRecordService {
 
@@ -78,6 +80,12 @@ public class RecurrentExpenseRecordService implements IRecurrentExpenseRecordSer
     public RecurrentExpenseRecordDTO cancel(Long id) throws ChangeSetPersister.NotFoundException {
         RecurrentExpenseRecord record = find(id);
         record.setCancelled(true);
+        // No real expense linked (manual toggle) — assume the budgeted amount was paid.
+        if (record.getExpense() == null) {
+            RecurrentExpense recurrentExpense = record.getRecurrentExpense();
+            record.setAmountSpentInPesos(recurrentExpense.getAmountInPesos());
+            record.setAmountSpentInDollars(recurrentExpense.getAmountInDollars());
+        }
         recordRepository.save(record);
         log.debug("RecurrentExpenseRecord with id {} cancelled successfully", record.getId());
         return modelMapper.map(record, RecurrentExpenseRecordDTO.class);
@@ -89,6 +97,8 @@ public class RecurrentExpenseRecordService implements IRecurrentExpenseRecordSer
         RecurrentExpenseRecord record = find(id);
         record.setCancelled(false);
         record.setExpense(null);
+        record.setAmountSpentInPesos(BigDecimal.ZERO);
+        record.setAmountSpentInDollars(BigDecimal.ZERO);
         recordRepository.save(record);
         log.debug("RecurrentExpenseRecord with id {} uncancelled successfully", record.getId());
         return modelMapper.map(record, RecurrentExpenseRecordDTO.class);

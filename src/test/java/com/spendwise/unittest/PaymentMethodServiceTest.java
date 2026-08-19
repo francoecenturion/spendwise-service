@@ -603,4 +603,60 @@ public class PaymentMethodServiceTest {
 
     }
 
+    @Test
+    @DisplayName("Set default payment method clears other defaults and sets isDefault flag")
+    public void testSetDefault() throws Exception {
+
+        // Arrange
+        Long id = 1L;
+        PaymentMethodDTO paymentMethodDTO = new PaymentMethodDTO();
+        paymentMethodDTO.setId(id);
+        paymentMethodDTO.setName("Mercado Pago");
+        paymentMethodDTO.setPaymentMethodType("DEBIT_CARD");
+        paymentMethodDTO.setEnabled(true);
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        PaymentMethodDTO obtained = paymentMethodService.setDefault(id);
+
+        // Assert
+        assertTrue(obtained.getIsDefault());
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
+        Mockito.verify(paymentMethodRepository).clearDefaultsExcept(testUser, id);
+        Mockito.verify(paymentMethodRepository).save(paymentMethod);
+        Mockito.verifyNoMoreInteractions(paymentMethodRepository);
+
+    }
+
+    @Test
+    @DisplayName("Remove default payment method unsets isDefault flag")
+    public void testRemoveDefault() throws Exception {
+
+        // Arrange
+        Long id = 1L;
+        PaymentMethodDTO paymentMethodDTO = new PaymentMethodDTO();
+        paymentMethodDTO.setId(id);
+        paymentMethodDTO.setName("Mercado Pago");
+        paymentMethodDTO.setPaymentMethodType("DEBIT_CARD");
+        paymentMethodDTO.setEnabled(true);
+        paymentMethodDTO.setIsDefault(true);
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+
+        Mockito.when(paymentMethodRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(paymentMethod));
+        Mockito.when(paymentMethodRepository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        PaymentMethodDTO obtained = paymentMethodService.removeDefault(id);
+
+        // Assert
+        assertFalse(obtained.getIsDefault());
+        Mockito.verify(paymentMethodRepository).findByIdAndUser(id, testUser);
+        Mockito.verify(paymentMethodRepository).save(paymentMethod);
+        Mockito.verifyNoMoreInteractions(paymentMethodRepository);
+
+    }
+
 }

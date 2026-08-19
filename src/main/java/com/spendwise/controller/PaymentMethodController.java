@@ -85,4 +85,20 @@ public class PaymentMethodController {
         return ResponseEntity
                 .ok(paymentMethod);
     }
+
+    @PatchMapping("/{id}/setDefault")
+    public ResponseEntity<PaymentMethodDTO> setDefault(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethodDTO paymentMethod = iPaymentMethodService.setDefault(id);
+        log.debug("SET DEFAULT Payment Method Finished {}", paymentMethod);
+        return ResponseEntity
+                .ok(paymentMethod);
+    }
+
+    @PatchMapping("/{id}/removeDefault")
+    public ResponseEntity<PaymentMethodDTO> removeDefault(@PathVariable Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethodDTO paymentMethod = iPaymentMethodService.removeDefault(id);
+        log.debug("REMOVE DEFAULT Payment Method Finished {}", paymentMethod);
+        return ResponseEntity
+                .ok(paymentMethod);
+    }
 }

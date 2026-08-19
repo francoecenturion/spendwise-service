@@ -14,14 +14,14 @@ import com.spendwise.model.Currency;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.RecommendedEntity;
-import com.spendwise.model.RecommendedPaymentMethod;
+import com.spendwise.model.RecommendedMerchantShortcut;
+import com.spendwise.model.MerchantShortcut;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
 import com.spendwise.model.auth.PasswordResetToken;
 import com.spendwise.repository.BudgetRepository;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
-import com.spendwise.repository.CardExpenseRepository;
 import com.spendwise.repository.PersonalDebtRepository;
 import com.spendwise.repository.ExpenseRepository;
 import com.spendwise.repository.GmailCredentialRepository;
@@ -29,12 +29,13 @@ import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
 import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.MerchantBindingRepository;
+import com.spendwise.repository.MerchantShortcutRepository;
 import com.spendwise.repository.PasswordResetTokenRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.repository.RecurrentExpenseRecordRepository;
 import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
-import com.spendwise.repository.RecommendedPaymentMethodRepository;
+import com.spendwise.repository.RecommendedMerchantShortcutRepository;
 import com.spendwise.repository.SavingRepository;
 import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.repository.UserRepository;
@@ -57,7 +58,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -75,14 +75,12 @@ public class AuthService implements IAuthService {
     private final IssuingEntityRepository issuingEntityRepository;
     private final PaymentMethodRepository paymentMethodRepository;
     private final RecommendedEntityRepository recommendedEntityRepository;
-    private final RecommendedPaymentMethodRepository recommendedPaymentMethodRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CategoryRepository categoryRepository;
     private final RecommendedCategoryRepository recommendedCategoryRepository;
     private final RefreshTokenService refreshTokenService;
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
-    private final CardExpenseRepository cardExpenseRepository;
     private final PersonalDebtRepository personalDebtRepository;
     private final BudgetRepository budgetRepository;
     private final SavingRepository savingRepository;
@@ -92,6 +90,8 @@ public class AuthService implements IAuthService {
     private final MailImportRepository mailImportRepository;
     private final MerchantBindingRepository merchantBindingRepository;
     private final GmailCredentialRepository gmailCredentialRepository;
+    private final MerchantShortcutRepository merchantShortcutRepository;
+    private final RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository;
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Value("${app.base-url:http://localhost:8080}")
@@ -107,14 +107,12 @@ public class AuthService implements IAuthService {
                        IssuingEntityRepository issuingEntityRepository,
                        PaymentMethodRepository paymentMethodRepository,
                        RecommendedEntityRepository recommendedEntityRepository,
-                       RecommendedPaymentMethodRepository recommendedPaymentMethodRepository,
                        PasswordResetTokenRepository passwordResetTokenRepository,
                        CategoryRepository categoryRepository,
                        RecommendedCategoryRepository recommendedCategoryRepository,
                        RefreshTokenService refreshTokenService,
                        ExpenseRepository expenseRepository,
                        IncomeRepository incomeRepository,
-                       CardExpenseRepository cardExpenseRepository,
                        PersonalDebtRepository personalDebtRepository,
                        BudgetRepository budgetRepository,
                        SavingRepository savingRepository,
@@ -123,7 +121,9 @@ public class AuthService implements IAuthService {
                        RecurrentExpenseRecordRepository recurrentExpenseRecordRepository,
                        MailImportRepository mailImportRepository,
                        MerchantBindingRepository merchantBindingRepository,
-                       GmailCredentialRepository gmailCredentialRepository) {
+                       GmailCredentialRepository gmailCredentialRepository,
+                       MerchantShortcutRepository merchantShortcutRepository,
+                       RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository) {
         this.userRepository = userRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -134,14 +134,12 @@ public class AuthService implements IAuthService {
         this.issuingEntityRepository = issuingEntityRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.recommendedEntityRepository = recommendedEntityRepository;
-        this.recommendedPaymentMethodRepository = recommendedPaymentMethodRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.categoryRepository = categoryRepository;
         this.recommendedCategoryRepository = recommendedCategoryRepository;
         this.refreshTokenService = refreshTokenService;
         this.expenseRepository = expenseRepository;
         this.incomeRepository = incomeRepository;
-        this.cardExpenseRepository = cardExpenseRepository;
         this.personalDebtRepository = personalDebtRepository;
         this.budgetRepository = budgetRepository;
         this.savingRepository = savingRepository;
@@ -151,6 +149,8 @@ public class AuthService implements IAuthService {
         this.mailImportRepository = mailImportRepository;
         this.merchantBindingRepository = merchantBindingRepository;
         this.gmailCredentialRepository = gmailCredentialRepository;
+        this.merchantShortcutRepository = merchantShortcutRepository;
+        this.recommendedMerchantShortcutRepository = recommendedMerchantShortcutRepository;
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@ public class AuthService implements IAuthService {
             }
         }
 
-        // ── Create issuing entities ───────────────────────────────────────────
+        // ── Create issuing entities (each gets QR/Transferencia/Débito/Crédito automatically) ──
         Map<Long, IssuingEntity> entityMap = new HashMap<>();
         List<Long> selectedEntityIds = dto.getSelectedEntityIds();
         if (selectedEntityIds != null) {
@@ -207,48 +207,23 @@ public class AuthService implements IAuthService {
                     ie.setIcon(rec.getIconUrl());
                     ie.setEnabled(true);
                     ie.setUser(user);
-                    entityMap.put(rec.getId(), issuingEntityRepository.save(ie));
+                    IssuingEntity saved = issuingEntityRepository.save(ie);
+                    entityMap.put(rec.getId(), saved);
+                    createEntityPaymentMethods(saved);
                 });
             }
         }
 
-        // ── Create payment methods ────────────────────────────────────────────
-        // Always create generic Efectivo and Transferencia bancaria
-        List<RecommendedPaymentMethod> defaultPms = recommendedPaymentMethodRepository
-                .findByEntityIsNullAndPaymentMethodTypeIn(List.of(PaymentMethodType.CASH, PaymentMethodType.TRANSFER));
-        Set<Long> defaultPmIds = new java.util.HashSet<>();
-        for (RecommendedPaymentMethod rec : defaultPms) {
-            PaymentMethod pm = new PaymentMethod();
-            pm.setName(rec.getName());
-            pm.setIcon(rec.getIconUrl());
-            pm.setPaymentMethodType(rec.getPaymentMethodType());
-            pm.setEnabled(true);
-            pm.setUser(user);
-            paymentMethodRepository.save(pm);
-            defaultPmIds.add(rec.getId());
-        }
-
-        // Create user-selected payment methods (skip any already created above)
-        List<Long> selectedPmIds = dto.getSelectedPaymentMethodIds();
-        if (selectedPmIds != null) {
-            for (Long pmId : selectedPmIds) {
-                if (defaultPmIds.contains(pmId)) continue;
-                recommendedPaymentMethodRepository.findById(pmId).ifPresent(rec -> {
-                    PaymentMethod pm = new PaymentMethod();
-                    pm.setName(rec.getName());
-                    pm.setIcon(rec.getIconUrl());
-                    pm.setPaymentMethodType(rec.getPaymentMethodType());
-                    pm.setEnabled(true);
-                    pm.setUser(user);
-                    if (rec.getEntity() != null) {
-                        pm.setIssuingEntity(entityMap.get(rec.getEntity().getId()));
-                    }
-                    paymentMethodRepository.save(pm);
-                });
-            }
-        }
+        // ── Efectivo: the one payment method with no entity, created for every user ──
+        PaymentMethod cash = new PaymentMethod();
+        cash.setName("Efectivo");
+        cash.setPaymentMethodType(PaymentMethodType.CASH);
+        cash.setEnabled(true);
+        cash.setUser(user);
+        paymentMethodRepository.save(cash);
 
         // ── Create default categories from recommended list ───────────────────
+        Map<Long, Category> categoryMap = new HashMap<>();
         List<RecommendedCategory> recommendedCategories = recommendedCategoryRepository.findAllByOrderByDisplayOrderAsc();
         for (RecommendedCategory rec : recommendedCategories) {
             Category cat = new Category();
@@ -257,7 +232,21 @@ public class AuthService implements IAuthService {
             cat.setType(rec.getType());
             cat.setEnabled(true);
             cat.setUser(user);
-            categoryRepository.save(cat);
+            categoryMap.put(rec.getId(), categoryRepository.save(cat));
+        }
+
+        // ── Create default merchant shortcuts from recommended list ───────────
+        List<RecommendedMerchantShortcut> recommendedShortcuts = recommendedMerchantShortcutRepository.findAllByOrderByDisplayOrderAsc();
+        for (RecommendedMerchantShortcut rec : recommendedShortcuts) {
+            Category category = rec.getCategory() != null ? categoryMap.get(rec.getCategory().getId()) : null;
+            if (category == null) continue;
+            MerchantShortcut shortcut = new MerchantShortcut();
+            shortcut.setName(rec.getName());
+            shortcut.setIcon(rec.getIcon());
+            shortcut.setCategory(category);
+            shortcut.setEnabled(true);
+            shortcut.setUser(user);
+            merchantShortcutRepository.save(shortcut);
         }
 
         // ── Send verification email ───────────────────────────────────────────
@@ -270,12 +259,35 @@ public class AuthService implements IAuthService {
         String link = baseUrl + "/verify-email?token=" + verificationToken.getToken();
         emailService.sendVerificationEmail(user.getEmail(), user.getName(), link);
 
-        log.debug("User {} registered with {} currencies, {} entities, {} payment methods",
+        log.debug("User {} registered with {} currencies, {} entities",
                 user.getEmail(),
                 currencies != null ? currencies.size() : 0,
-                entityMap.size(),
-                selectedPmIds != null ? selectedPmIds.size() : 0);
+                entityMap.size());
         return "Registration successful. Please check your email to verify your account.";
+    }
+
+    /** Creates the one-per-type payment methods (QR/Transferencia/Débito/Crédito) for a newly created entity. */
+    private void createEntityPaymentMethods(IssuingEntity entity) {
+        for (PaymentMethodType type : List.of(PaymentMethodType.QR, PaymentMethodType.TRANSFER,
+                PaymentMethodType.DEBIT_CARD, PaymentMethodType.CREDIT_CARD)) {
+            PaymentMethod pm = new PaymentMethod();
+            pm.setName(entity.getDescription() + " · " + paymentMethodTypeLabel(type));
+            pm.setPaymentMethodType(type);
+            pm.setEnabled(true);
+            pm.setUser(entity.getUser());
+            pm.setIssuingEntity(entity);
+            paymentMethodRepository.save(pm);
+        }
+    }
+
+    private String paymentMethodTypeLabel(PaymentMethodType type) {
+        return switch (type) {
+            case QR -> "QR";
+            case TRANSFER -> "Transferencia";
+            case DEBIT_CARD -> "Débito";
+            case CREDIT_CARD -> "Crédito";
+            case CASH -> "Efectivo";
+        };
     }
 
     // ── Verify email ──────────────────────────────────────────────────────────
@@ -393,10 +405,10 @@ public class AuthService implements IAuthService {
         expenseRepository.deleteAllByUser(user);
         recurrentExpenseRepository.deleteAllByUser(user);
         incomeRepository.deleteAllByUser(user);
-        cardExpenseRepository.deleteAllByUser(user);
         personalDebtRepository.deleteAllByUser(user);
         budgetRepository.deleteAllByUser(user);
         merchantBindingRepository.deleteAllByUser(user);
+        merchantShortcutRepository.deleteAllByUser(user);
         savingRepository.deleteAllByUser(user);
         savingsWalletRepository.deleteAllByUser(user);
         paymentMethodRepository.deleteAllByUser(user);

@@ -16,6 +16,5 @@ public class RegisterWithSetupDTO {
     // Setup selections (all optional — user may skip steps)
     private List<CurrencyDTO> currencies;
     private List<Long> selectedEntityIds;
-    private List<Long> selectedPaymentMethodIds;
 
 }

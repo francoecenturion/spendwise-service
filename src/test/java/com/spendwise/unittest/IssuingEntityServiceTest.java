@@ -4,6 +4,7 @@ import com.spendwise.dto.IssuingEntityDTO;
 import com.spendwise.dto.IssuingEntityFilterDTO;
 import com.spendwise.model.IssuingEntity;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.IssuingEntityService;
 import com.spendwise.model.auth.User;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +43,9 @@ public class IssuingEntityServiceTest {
 
     @Mock
     private IssuingEntityRepository issuingEntityRepository;
+
+    @Mock
+    private PaymentMethodRepository paymentMethodRepository;
 
     @InjectMocks
     private IssuingEntityService issuingEntityService;
@@ -379,6 +383,7 @@ public class IssuingEntityServiceTest {
 
         // Act
         Mockito.when(issuingEntityRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(entity));
+        Mockito.when(paymentMethodRepository.findByIssuingEntity(entity)).thenReturn(Collections.emptyList());
         IssuingEntityDTO deleted = issuingEntityService.delete(id);
 
         // Assert

@@ -158,11 +158,11 @@ public class BudgetService implements IBudgetService {
                     .findByRecurrentExpenseAndMonthAndYear(re, budget.getMonth(), budget.getYear());
             if (record.isPresent() && Boolean.TRUE.equals(record.get().getCancelled())) {
                 cancelledCount++;
-                if (re.getAmountInPesos() != null) {
-                    totalCancelledARS = totalCancelledARS.add(re.getAmountInPesos());
+                if (record.get().getAmountSpentInPesos() != null) {
+                    totalCancelledARS = totalCancelledARS.add(record.get().getAmountSpentInPesos());
                 }
-                if (re.getAmountInDollars() != null) {
-                    totalCancelledUSD = totalCancelledUSD.add(re.getAmountInDollars());
+                if (record.get().getAmountSpentInDollars() != null) {
+                    totalCancelledUSD = totalCancelledUSD.add(record.get().getAmountSpentInDollars());
                 }
             }
         }

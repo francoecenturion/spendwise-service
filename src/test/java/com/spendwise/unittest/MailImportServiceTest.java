@@ -15,7 +15,6 @@ import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.PaymentMethodRepository;
 import com.spendwise.service.MailImportService;
-import com.spendwise.service.interfaces.IDebtService;
 import com.spendwise.service.interfaces.IExpenseService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +46,6 @@ public class MailImportServiceTest {
     @Mock private PaymentMethodRepository paymentMethodRepository;
     @Mock private MerchantBindingRepository merchantBindingRepository;
     @Mock private IExpenseService expenseService;
-    @Mock private IDebtService debtService;
 
     @InjectMocks
     private MailImportService mailImportService;
@@ -156,7 +154,6 @@ public class MailImportServiceTest {
 
         assertEquals(MailImportStatus.CONFIRMED, result.getStatus());
         Mockito.verify(expenseService).create(any());
-        Mockito.verify(debtService, Mockito.never()).create(any());
         Mockito.verify(merchantBindingRepository).save(any(MerchantBinding.class));
     }
 
@@ -216,19 +213,23 @@ public class MailImportServiceTest {
         Mockito.verify(expenseService).create(any());
     }
 
-    // ── confirm: debt path ────────────────────────────────────────────────────
+    // ── confirm: credit card purchases also become Expenses ────────────────────
 
     @Test
-    @DisplayName("confirm creates Debt when parsedIsDebt=true")
+    @DisplayName("confirm creates a normal Expense when parsedIsDebt=true (credit card purchases count as spend too)")
     public void testConfirm_debt() throws ChangeSetPersister.NotFoundException {
         MailImport mailImport = buildPendingImport(1L, true);
+        Category category = buildCategory(10L);
         PaymentMethod pm = buildPaymentMethod(20L);
 
         MailImportConfirmDTO dto = new MailImportConfirmDTO();
+        dto.setCategoryId(10L);
         dto.setPaymentMethodId(20L);
 
         Mockito.when(mailImportRepository.findById(1L)).thenReturn(Optional.of(mailImport));
+        Mockito.when(categoryRepository.findByIdAndUser(10L, testUser)).thenReturn(Optional.of(category));
         Mockito.when(paymentMethodRepository.findByIdAndUser(20L, testUser)).thenReturn(Optional.of(pm));
+        Mockito.when(expenseService.create(any())).thenReturn(new ExpenseDTO());
         Mockito.when(merchantBindingRepository.findByUserAndMerchantNameIgnoreCase(any(), any()))
                 .thenReturn(Optional.empty());
         Mockito.when(mailImportRepository.save(mailImport)).thenReturn(mailImport);
@@ -236,8 +237,7 @@ public class MailImportServiceTest {
         MailImportDTO result = mailImportService.confirm(1L, dto);
 
         assertEquals(MailImportStatus.CONFIRMED, result.getStatus());
-        Mockito.verify(debtService).create(any());
-        Mockito.verify(expenseService, Mockito.never()).create(any());
+        Mockito.verify(expenseService).create(any());
     }
 
     @Test

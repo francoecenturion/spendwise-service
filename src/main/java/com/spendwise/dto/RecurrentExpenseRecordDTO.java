@@ -2,6 +2,8 @@ package com.spendwise.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class RecurrentExpenseRecordDTO {
 
@@ -10,6 +12,8 @@ public class RecurrentExpenseRecordDTO {
     private Integer month;
     private Integer year;
     private Boolean cancelled;
+    private BigDecimal amountSpentInPesos;
+    private BigDecimal amountSpentInDollars;
     private ExpenseDTO expense;
 
 }
