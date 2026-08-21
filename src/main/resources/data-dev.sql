@@ -2,6 +2,8 @@
 -- USUARIO DE PRUEBA
 -- password: test1234
 -- ─────────────────────────────────────────────────────────────────────────────
+SET search_path TO spendwise;
+
 INSERT INTO APP_USER (email, password_hash, name, surname, enabled, role, creation_date, last_update_date)
 VALUES ('test@gmail.com', '$2a$10$LTDozBa/.MSCvCqve9TvJe1xLkXhuBMQWEFOybp/zrpzvp1W4ucJ2', 'Franco', 'Test', true, 'USER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
