@@ -9,13 +9,12 @@ jobs:
   test-and-deploy:
     name: Test and deploy
     runs-on: ubuntu-latest
-    # Only deploy when this push to main is a merge from develop — either a
-    # GitHub PR merge commit ("Merge pull request #N from OWNER/develop") or
-    # a local merge commit ("Merge branch 'develop' [into main]"). Both
-    # contain "develop" in the commit message. If you switch to squash
-    # merging, GitHub's default squash commit message won't mention the
-    # source branch, so this condition would need to change.
-    if: contains(github.event.head_commit.message, 'develop')
+    # Run for merges from develop or release/* branches. GitHub merge commits
+    # include the source branch in the commit message.
+    # Squash merges need the source branch name in the squash title.
+    if: >
+      contains(github.event.head_commit.message, 'develop') ||
+      contains(github.event.head_commit.message, 'release/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
