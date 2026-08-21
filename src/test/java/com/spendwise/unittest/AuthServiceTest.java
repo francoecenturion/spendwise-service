@@ -5,16 +5,34 @@ import com.spendwise.dto.UserDTO;
 import com.spendwise.dto.auth.AuthResponseDTO;
 import com.spendwise.dto.auth.LoginRequestDTO;
 import com.spendwise.dto.auth.UpdateProfileDTO;
+import com.spendwise.model.auth.RefreshToken;
 import com.spendwise.model.auth.VerificationToken;
 import com.spendwise.model.auth.User;
+import com.spendwise.repository.BudgetRepository;
+import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
+import com.spendwise.repository.ExpenseRepository;
+import com.spendwise.repository.GmailCredentialRepository;
+import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
+import com.spendwise.repository.MailImportRepository;
+import com.spendwise.repository.MerchantBindingRepository;
+import com.spendwise.repository.MerchantShortcutRepository;
+import com.spendwise.repository.PasswordResetTokenRepository;
 import com.spendwise.repository.PaymentMethodRepository;
+import com.spendwise.repository.PersonalDebtRepository;
+import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
+import com.spendwise.repository.RecommendedMerchantShortcutRepository;
+import com.spendwise.repository.RecurrentExpenseRecordRepository;
+import com.spendwise.repository.RecurrentExpenseRepository;
+import com.spendwise.repository.SavingRepository;
+import com.spendwise.repository.SavingsWalletRepository;
 import com.spendwise.repository.UserRepository;
 import com.spendwise.repository.VerificationTokenRepository;
 import com.spendwise.security.JwtUtil;
 import com.spendwise.service.AuthService;
+import com.spendwise.service.RefreshTokenService;
 import com.spendwise.service.UserService;
 import com.spendwise.service.interfaces.IEmailService;
 import org.junit.jupiter.api.AfterEach;
@@ -66,6 +84,42 @@ public class AuthServiceTest {
     private CurrencyRepository currencyRepository;
 
     @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private ExpenseRepository expenseRepository;
+
+    @Mock
+    private IncomeRepository incomeRepository;
+
+    @Mock
+    private PersonalDebtRepository personalDebtRepository;
+
+    @Mock
+    private BudgetRepository budgetRepository;
+
+    @Mock
+    private RecurrentExpenseRepository recurrentExpenseRepository;
+
+    @Mock
+    private SavingRepository savingRepository;
+
+    @Mock
+    private SavingsWalletRepository savingsWalletRepository;
+
+    @Mock
+    private MerchantBindingRepository merchantBindingRepository;
+
+    @Mock
+    private MerchantShortcutRepository merchantShortcutRepository;
+
+    @Mock
+    private GmailCredentialRepository gmailCredentialRepository;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
     private IssuingEntityRepository issuingEntityRepository;
 
     @Mock
@@ -73,6 +127,21 @@ public class AuthServiceTest {
 
     @Mock
     private RecommendedEntityRepository recommendedEntityRepository;
+
+    @Mock
+    private RecommendedCategoryRepository recommendedCategoryRepository;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
+
+    @Mock
+    private MailImportRepository mailImportRepository;
+
+    @Mock
+    private RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -264,6 +333,9 @@ public class AuthServiceTest {
         Mockito.when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         Mockito.when(passwordEncoder.matches("rawPassword", "$2a$10$hashedPassword")).thenReturn(true);
         Mockito.when(jwtUtil.generateToken(user)).thenReturn("mocked.jwt.token");
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken("mocked.refresh.token");
+        Mockito.when(refreshTokenService.create(user)).thenReturn(refreshToken);
 
         // Act
         AuthResponseDTO result = authService.login(dto);
@@ -524,7 +596,7 @@ public class AuthServiceTest {
     // ───────────────────────── deleteAccount ─────────────────────────────────
 
     @Test
-    @DisplayName("deleteAccount sets enabled=false and saves the user")
+    @DisplayName("deleteAccount removes the user and related data")
     public void testDeleteAccount() {
 
         // Arrange
@@ -532,15 +604,12 @@ public class AuthServiceTest {
         setSecurityContext(user);
 
         Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        Mockito.when(userRepository.save(user)).thenReturn(user);
-
         // Act
         authService.deleteAccount();
 
         // Assert
-        assertFalse(user.getEnabled(), "Account should be disabled after deletion");
         Mockito.verify(userRepository).findById(1L);
-        Mockito.verify(userRepository).save(user);
+        Mockito.verify(userRepository).delete(user);
         Mockito.verifyNoMoreInteractions(userRepository);
     }
 
