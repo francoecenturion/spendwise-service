@@ -12,10 +12,8 @@ import com.spendwise.repository.BudgetRepository;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.repository.ExpenseRepository;
-import com.spendwise.repository.GmailCredentialRepository;
 import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
-import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.MerchantShortcutRepository;
 import com.spendwise.repository.PasswordResetTokenRepository;
@@ -114,9 +112,6 @@ public class AuthServiceTest {
     private MerchantShortcutRepository merchantShortcutRepository;
 
     @Mock
-    private GmailCredentialRepository gmailCredentialRepository;
-
-    @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Mock
@@ -136,9 +131,6 @@ public class AuthServiceTest {
 
     @Mock
     private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
-
-    @Mock
-    private MailImportRepository mailImportRepository;
 
     @Mock
     private RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository;

@@ -15,9 +15,7 @@ import com.spendwise.model.Expense;
 import com.spendwise.model.PaymentMethod;
 import com.spendwise.model.RecurrentExpense;
 import com.spendwise.model.RecurrentExpenseRecord;
-import com.spendwise.model.MailImport;
 import com.spendwise.repository.ExpenseRepository;
-import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.RecurrentExpenseRecordRepository;
 import com.spendwise.repository.RecurrentExpenseRepository;
 import com.spendwise.service.ExpenseService;
@@ -75,9 +73,6 @@ public class ExpenseServiceTest {
 
     @Mock
     private RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
-
-    @Mock
-    private MailImportRepository mailImportRepository;
 
     @InjectMocks
     private ExpenseService expenseService;
@@ -1107,7 +1102,6 @@ public class ExpenseServiceTest {
         existingRecord.setAmountSpentInDollars(BigDecimal.ZERO);
 
         Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(expense));
-        Mockito.when(mailImportRepository.findByExpense(expense)).thenReturn(Optional.empty());
         Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
                 .thenReturn(Optional.of(recurrentExpense));
         Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
