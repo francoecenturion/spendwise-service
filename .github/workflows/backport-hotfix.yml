@@ -1,0 +1,84 @@
+name: Backport hotfix to develop
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Create backport PR
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'hotfix/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create backport branch and cherry-pick hotfix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOTFIX_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          hotfix_name="${HOTFIX_REF#hotfix/}"
+          backport_branch="backport/${hotfix_name}"
+
+          existing_pr=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base develop \
+            --head "$backport_branch" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$existing_pr" -gt 0 ]; then
+            echo "An open backport PR already exists for $HOTFIX_REF."
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --heads origin "$backport_branch" >/dev/null 2>&1; then
+            echo "The branch $backport_branch already exists. Remove or review it before retrying."
+            exit 1
+          fi
+
+          mapfile -t commits < <(
+            gh api --paginate \
+              "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits" \
+              --jq '.[].sha'
+          )
+
+          if [ "${#commits[@]}" -eq 0 ]; then
+            echo "The hotfix PR contains no commits to backport."
+            exit 1
+          fi
+
+          git switch -c "$backport_branch"
+          for commit in "${commits[@]}"; do
+            git cherry-pick "$commit"
+          done
+          git push --set-upstream origin "$backport_branch"
+
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base develop \
+            --head "$backport_branch" \
+            --title "Backport $HOTFIX_REF to develop" \
+            --body "This PR backports the merged hotfix [$HOTFIX_REF](https://github.com/$GITHUB_REPOSITORY/pull/$PR_NUMBER) from \`main\` into \`develop\`."

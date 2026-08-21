@@ -4,20 +4,30 @@ on:
   push:
     branches:
       - main
+  pull_request_target:
+    types: [closed]
+    branches:
+      - main
 
 jobs:
   test-and-deploy:
     name: Test and deploy
     runs-on: ubuntu-latest
-    # Run for merges from develop or release/* branches. GitHub merge commits
-    # include the source branch in the commit message.
-    # Squash merges need the source branch name in the squash title.
+    # Pushes to main deploy after merges from develop or release/* branches.
+    # A merged hotfix PR is handled by pull_request_target, which gives us the
+    # source branch directly instead of relying on the merge commit message.
     if: >
-      contains(github.event.head_commit.message, 'develop') ||
-      contains(github.event.head_commit.message, 'release/')
+      (github.event_name == 'push' &&
+        (contains(github.event.head_commit.message, 'develop') ||
+         contains(github.event.head_commit.message, 'release/'))) ||
+      (github.event_name == 'pull_request_target' &&
+        github.event.pull_request.merged == true &&
+        startsWith(github.event.pull_request.head.ref, 'hotfix/'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
