@@ -3,13 +3,12 @@ package com.spendwise.dto;
 import lombok.Data;
 
 @Data
-public class PaymentMethodDTO {
+public class MerchantShortcutDTO {
 
     private Long id;
     private String name;
-    private String paymentMethodType;
     private Boolean enabled;
-    private Boolean isDefault;
     private String icon;
-    private IssuingEntityDTO issuingEntity;
+    private CategoryDTO category;
+
 }

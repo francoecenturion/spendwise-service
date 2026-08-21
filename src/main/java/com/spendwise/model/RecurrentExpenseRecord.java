@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
+
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "RECURRENT_EXPENSE_RECORD")
@@ -23,6 +25,13 @@ public class RecurrentExpenseRecord extends BaseEntity {
 
     @Column(name = "CANCELLED")
     private Boolean cancelled;
+
+    /** Actual amount spent this month, accumulated from every matching Expense — never the shared budgeted template. */
+    @Column(name = "AMOUNT_SPENT_IN_PESOS")
+    private BigDecimal amountSpentInPesos;
+
+    @Column(name = "AMOUNT_SPENT_IN_DOLLARS")
+    private BigDecimal amountSpentInDollars;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EXPENSE_ID", nullable = true)

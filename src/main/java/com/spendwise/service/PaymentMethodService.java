@@ -121,6 +121,27 @@ public class PaymentMethodService implements IPaymentMethodService {
         return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
     }
 
+    @Transactional
+    @Override
+    public PaymentMethodDTO setDefault(Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethod paymentMethod = find(id);
+        paymentMethodRepository.clearDefaultsExcept(currentUser(), id);
+        paymentMethod.setIsDefault(true);
+        PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        log.debug("PaymentMethod with id {} set as default successfully", savedPaymentMethod.getId());
+        return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public PaymentMethodDTO removeDefault(Long id) throws ChangeSetPersister.NotFoundException {
+        PaymentMethod paymentMethod = find(id);
+        paymentMethod.setIsDefault(false);
+        PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
+        log.debug("PaymentMethod with id {} removed from default successfully", savedPaymentMethod.getId());
+        return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
+    }
+
     protected PaymentMethod find(Long id) throws ChangeSetPersister.NotFoundException {
         return paymentMethodRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(ChangeSetPersister.NotFoundException::new);

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -931,8 +932,8 @@ public class ExpenseServiceTest {
     }
 
     @Test
-    @DisplayName("Create expense updates recurrent expense amount when it differs from the loaded expense amount")
-    public void testCreateUpdatesRecurrentExpenseAmountWhenDiffers() {
+    @DisplayName("Create expense never mutates the shared recurrent expense template amount")
+    public void testCreateNeverMutatesRecurrentExpenseTemplateAmount() {
         // Arrange
         LocalDate today = LocalDate.now();
         BigDecimal newAmount = new BigDecimal("120000");
@@ -966,23 +967,21 @@ public class ExpenseServiceTest {
                 .thenReturn(Optional.empty());
         Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
-        Mockito.when(recurrentExpenseRepository.save(recurrentExpense))
-                .thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         expenseService.create(dto);
 
-        // Assert
-        assertEquals(newAmount, recurrentExpense.getAmountInPesos());
-        Mockito.verify(recurrentExpenseRepository).save(recurrentExpense);
+        // Assert: the template's budgeted amount (used by every month's budget) is left untouched
+        assertEquals(oldAmount, recurrentExpense.getAmountInPesos());
+        Mockito.verify(recurrentExpenseRepository, Mockito.never()).save(any());
     }
 
     @Test
-    @DisplayName("Create expense does not update recurrent expense amount when it matches the loaded expense amount")
-    public void testCreateDoesNotUpdateRecurrentExpenseAmountWhenSame() {
+    @DisplayName("Create expense accumulates amountSpent onto a new record instead of overwriting")
+    public void testCreateAccumulatesAmountSpentOnNewRecord() {
         // Arrange
         LocalDate today = LocalDate.now();
-        BigDecimal amount = new BigDecimal("100000");
+        BigDecimal amount = new BigDecimal("120000");
         BigDecimal sellingPrice = new BigDecimal("1500");
 
         ExpenseDTO dto = new ExpenseDTO();
@@ -996,7 +995,7 @@ public class ExpenseServiceTest {
         RecurrentExpense recurrentExpense = new RecurrentExpense();
         recurrentExpense.setId(1L);
         recurrentExpense.setDescription("Alquiler");
-        recurrentExpense.setAmountInPesos(amount);
+        recurrentExpense.setAmountInPesos(new BigDecimal("100000"));
         recurrentExpense.setEnabled(true);
         recurrentExpense.setUser(testUser);
 
@@ -1017,6 +1016,111 @@ public class ExpenseServiceTest {
         expenseService.create(dto);
 
         // Assert
-        Mockito.verify(recurrentExpenseRepository, Mockito.never()).save(any());
+        ArgumentCaptor<RecurrentExpenseRecord> captor = ArgumentCaptor.forClass(RecurrentExpenseRecord.class);
+        Mockito.verify(recurrentExpenseRecordRepository).save(captor.capture());
+        assertEquals(0, amount.compareTo(captor.getValue().getAmountSpentInPesos()));
+    }
+
+    @Test
+    @DisplayName("Create expense accumulates amountSpent onto an existing record instead of overwriting it")
+    public void testCreateAccumulatesAmountSpentOnExistingRecord() {
+        // Arrange
+        LocalDate today = LocalDate.now();
+        BigDecimal firstAmount = new BigDecimal("50000");
+        BigDecimal secondAmount = new BigDecimal("30000");
+        BigDecimal sellingPrice = new BigDecimal("1500");
+
+        ExpenseDTO dto = new ExpenseDTO();
+        dto.setDescription("Alquiler");
+        dto.setInputAmount(secondAmount);
+        dto.setDate(today);
+        dto.setCategory(modelMapper.map(category, CategoryDTO.class));
+        dto.setPaymentMethod(modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+        dto.setCurrency(currencyARS);
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setAmountInPesos(new BigDecimal("100000"));
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        RecurrentExpenseRecord existingRecord = new RecurrentExpenseRecord();
+        existingRecord.setId(5L);
+        existingRecord.setRecurrentExpense(recurrentExpense);
+        existingRecord.setMonth(today.getMonthValue());
+        existingRecord.setYear(today.getYear());
+        existingRecord.setCancelled(true);
+        existingRecord.setAmountSpentInPesos(firstAmount);
+        existingRecord.setAmountSpentInDollars(BigDecimal.ZERO);
+
+        DolarApiDTO dolarApiDTO = new DolarApiDTO();
+        dolarApiDTO.setSellingPrice(sellingPrice);
+
+        Mockito.when(dolarApiClient.getRate("oficial")).thenReturn(dolarApiDTO);
+        Mockito.when(expenseRepository.save(any(Expense.class))).thenAnswer(inv -> inv.getArgument(0));
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.of(existingRecord));
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        expenseService.create(dto);
+
+        // Assert: 50000 + 30000, not overwritten to just 30000
+        assertEquals(0, firstAmount.add(secondAmount).compareTo(existingRecord.getAmountSpentInPesos()));
+    }
+
+    @Test
+    @DisplayName("Delete expense reverses its accumulated amountSpent from the matching record")
+    public void testDeleteReversesAccumulatedAmountSpent() throws Exception {
+        // Arrange
+        Long id = 1L;
+        LocalDate today = LocalDate.now();
+        BigDecimal recordedAmount = new BigDecimal("80000");
+        BigDecimal expenseAmount = new BigDecimal("30000");
+
+        RecurrentExpense recurrentExpense = new RecurrentExpense();
+        recurrentExpense.setId(1L);
+        recurrentExpense.setDescription("Alquiler");
+        recurrentExpense.setEnabled(true);
+        recurrentExpense.setUser(testUser);
+
+        Expense expense = new Expense();
+        expense.setId(id);
+        expense.setDescription("Alquiler");
+        expense.setDate(today);
+        expense.setAmountInPesos(expenseAmount);
+        expense.setAmountInDollars(BigDecimal.ZERO);
+
+        RecurrentExpenseRecord existingRecord = new RecurrentExpenseRecord();
+        existingRecord.setId(5L);
+        existingRecord.setRecurrentExpense(recurrentExpense);
+        existingRecord.setMonth(today.getMonthValue());
+        existingRecord.setYear(today.getYear());
+        existingRecord.setCancelled(true);
+        existingRecord.setExpense(expense);
+        existingRecord.setAmountSpentInPesos(recordedAmount);
+        existingRecord.setAmountSpentInDollars(BigDecimal.ZERO);
+
+        Mockito.when(expenseRepository.findByIdAndUser(id, testUser)).thenReturn(Optional.of(expense));
+        Mockito.when(mailImportRepository.findByExpense(expense)).thenReturn(Optional.empty());
+        Mockito.when(recurrentExpenseRepository.findByDescriptionIgnoreCaseAndUserAndEnabledTrue("Alquiler", testUser))
+                .thenReturn(Optional.of(recurrentExpense));
+        Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(
+                recurrentExpense, today.getMonthValue(), today.getYear()))
+                .thenReturn(Optional.of(existingRecord));
+        Mockito.when(recurrentExpenseRecordRepository.save(any(RecurrentExpenseRecord.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        expenseService.delete(id);
+
+        // Assert: 80000 - 30000 remains, record stays cancelled since spend hasn't hit zero
+        assertEquals(0, new BigDecimal("50000").compareTo(existingRecord.getAmountSpentInPesos()));
+        assertTrue(existingRecord.getCancelled());
     }
 }

@@ -190,6 +190,8 @@ public class BudgetServiceTest {
         record1.setId(1L);
         record1.setCancelled(true);
         record1.setRecurrentExpense(re1);
+        record1.setAmountSpentInPesos(re1.getAmountInPesos());
+        record1.setAmountSpentInDollars(re1.getAmountInDollars());
         Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(re1, 1, 2025))
                 .thenReturn(Optional.of(record1));
 
@@ -523,10 +525,14 @@ public class BudgetServiceTest {
         RecurrentExpenseRecord record1 = new RecurrentExpenseRecord();
         record1.setCancelled(true);
         record1.setRecurrentExpense(re1);
+        record1.setAmountSpentInPesos(re1.getAmountInPesos());
+        record1.setAmountSpentInDollars(re1.getAmountInDollars());
 
         RecurrentExpenseRecord record2 = new RecurrentExpenseRecord();
         record2.setCancelled(true);
         record2.setRecurrentExpense(re2);
+        record2.setAmountSpentInPesos(re2.getAmountInPesos());
+        record2.setAmountSpentInDollars(re2.getAmountInDollars());
 
         Mockito.when(recurrentExpenseRecordRepository.findByRecurrentExpenseAndMonthAndYear(re1, 3, 2025))
                 .thenReturn(Optional.of(record1));

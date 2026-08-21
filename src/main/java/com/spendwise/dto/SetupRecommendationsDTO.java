@@ -8,5 +8,4 @@ import java.util.List;
 public class SetupRecommendationsDTO {
     private List<RecommendedCurrencyDTO> currencies;
     private List<RecommendedEntityDTO> entities;
-    private List<RecommendedPaymentMethodDTO> paymentMethods;
 }

@@ -3,17 +3,16 @@ package com.spendwise.controller;
 import com.spendwise.dto.RecommendedCategoryDTO;
 import com.spendwise.dto.RecommendedCurrencyDTO;
 import com.spendwise.dto.RecommendedEntityDTO;
-import com.spendwise.dto.RecommendedPaymentMethodDTO;
+import com.spendwise.dto.RecommendedMerchantShortcutDTO;
 import com.spendwise.enums.CategoryType;
-import com.spendwise.enums.PaymentMethodType;
 import com.spendwise.model.RecommendedCategory;
 import com.spendwise.model.RecommendedCurrency;
 import com.spendwise.model.RecommendedEntity;
-import com.spendwise.model.RecommendedPaymentMethod;
+import com.spendwise.model.RecommendedMerchantShortcut;
 import com.spendwise.repository.RecommendedCategoryRepository;
 import com.spendwise.repository.RecommendedCurrencyRepository;
 import com.spendwise.repository.RecommendedEntityRepository;
-import com.spendwise.repository.RecommendedPaymentMethodRepository;
+import com.spendwise.repository.RecommendedMerchantShortcutRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,17 +24,17 @@ public class AdminSetupController {
 
     private final RecommendedCurrencyRepository currencyRepo;
     private final RecommendedEntityRepository entityRepo;
-    private final RecommendedPaymentMethodRepository pmRepo;
     private final RecommendedCategoryRepository categoryRepo;
+    private final RecommendedMerchantShortcutRepository merchantShortcutRepo;
 
     public AdminSetupController(RecommendedCurrencyRepository currencyRepo,
                                 RecommendedEntityRepository entityRepo,
-                                RecommendedPaymentMethodRepository pmRepo,
-                                RecommendedCategoryRepository categoryRepo) {
+                                RecommendedCategoryRepository categoryRepo,
+                                RecommendedMerchantShortcutRepository merchantShortcutRepo) {
         this.currencyRepo = currencyRepo;
         this.entityRepo = entityRepo;
-        this.pmRepo = pmRepo;
         this.categoryRepo = categoryRepo;
+        this.merchantShortcutRepo = merchantShortcutRepo;
     }
 
     // ── Recommended Currencies ────────────────────────────────────────────────
@@ -110,54 +109,6 @@ public class AdminSetupController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Recommended Payment Methods ──────────────────────────────────────────
-
-    @GetMapping("/recommended-payment-methods")
-    public List<RecommendedPaymentMethodDTO> listPaymentMethods() {
-        return pmRepo.findAllByOrderByIdAsc().stream()
-                .map(this::toPmDTO)
-                .toList();
-    }
-
-    @PostMapping("/recommended-payment-methods")
-    public RecommendedPaymentMethodDTO createPaymentMethod(@RequestBody RecommendedPaymentMethodDTO dto) {
-        RecommendedPaymentMethod pm = new RecommendedPaymentMethod();
-        pm.setName(dto.getName());
-        pm.setIconUrl(dto.getIconUrl());
-        if (dto.getPaymentMethodType() != null) {
-            pm.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
-        }
-        if (dto.getRecommendedEntityId() != null) {
-            entityRepo.findById(dto.getRecommendedEntityId()).ifPresent(pm::setEntity);
-        }
-        return toPmDTO(pmRepo.save(pm));
-    }
-
-    @PutMapping("/recommended-payment-methods/{id}")
-    public ResponseEntity<RecommendedPaymentMethodDTO> updatePaymentMethod(@PathVariable Long id,
-                                                                            @RequestBody RecommendedPaymentMethodDTO dto) {
-        return pmRepo.findById(id).map(pm -> {
-            if (dto.getName() != null) pm.setName(dto.getName());
-            if (dto.getIconUrl() != null) pm.setIconUrl(dto.getIconUrl());
-            if (dto.getPaymentMethodType() != null) {
-                pm.setPaymentMethodType(PaymentMethodType.valueOf(dto.getPaymentMethodType()));
-            }
-            if (dto.getRecommendedEntityId() != null) {
-                entityRepo.findById(dto.getRecommendedEntityId()).ifPresent(pm::setEntity);
-            } else if (dto.getRecommendedEntityId() == null && dto.getName() != null) {
-                pm.setEntity(null);
-            }
-            return ResponseEntity.ok(toPmDTO(pmRepo.save(pm)));
-        }).orElse(ResponseEntity.notFound().build());
-    }
-
-    @DeleteMapping("/recommended-payment-methods/{id}")
-    public ResponseEntity<Void> deletePaymentMethod(@PathVariable Long id) {
-        if (!pmRepo.existsById(id)) return ResponseEntity.notFound().build();
-        pmRepo.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
-
     // ── Recommended Categories ───────────────────────────────────────────────
 
     @GetMapping("/recommended-categories")
@@ -196,6 +147,48 @@ public class AdminSetupController {
         return ResponseEntity.noContent().build();
     }
 
+    // ── Recommended Merchant Shortcuts ───────────────────────────────────────
+
+    @GetMapping("/recommended-merchant-shortcuts")
+    public List<RecommendedMerchantShortcutDTO> listMerchantShortcuts() {
+        return merchantShortcutRepo.findAllByOrderByDisplayOrderAsc().stream()
+                .map(this::toMerchantShortcutDTO)
+                .toList();
+    }
+
+    @PostMapping("/recommended-merchant-shortcuts")
+    public RecommendedMerchantShortcutDTO createMerchantShortcut(@RequestBody RecommendedMerchantShortcutDTO dto) {
+        RecommendedMerchantShortcut m = new RecommendedMerchantShortcut();
+        m.setName(dto.getName());
+        m.setIcon(dto.getIcon());
+        m.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 999);
+        if (dto.getRecommendedCategoryId() != null) {
+            categoryRepo.findById(dto.getRecommendedCategoryId()).ifPresent(m::setCategory);
+        }
+        return toMerchantShortcutDTO(merchantShortcutRepo.save(m));
+    }
+
+    @PutMapping("/recommended-merchant-shortcuts/{id}")
+    public ResponseEntity<RecommendedMerchantShortcutDTO> updateMerchantShortcut(@PathVariable Long id,
+                                                                                  @RequestBody RecommendedMerchantShortcutDTO dto) {
+        return merchantShortcutRepo.findById(id).map(m -> {
+            if (dto.getName() != null) m.setName(dto.getName());
+            if (dto.getIcon() != null) m.setIcon(dto.getIcon());
+            if (dto.getDisplayOrder() != null) m.setDisplayOrder(dto.getDisplayOrder());
+            if (dto.getRecommendedCategoryId() != null) {
+                categoryRepo.findById(dto.getRecommendedCategoryId()).ifPresent(m::setCategory);
+            }
+            return ResponseEntity.ok(toMerchantShortcutDTO(merchantShortcutRepo.save(m)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/recommended-merchant-shortcuts/{id}")
+    public ResponseEntity<Void> deleteMerchantShortcut(@PathVariable Long id) {
+        if (!merchantShortcutRepo.existsById(id)) return ResponseEntity.notFound().build();
+        merchantShortcutRepo.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Mappers ──────────────────────────────────────────────────────────────
 
     private RecommendedCurrencyDTO toCurrencyDTO(RecommendedCurrency c) {
@@ -226,16 +219,14 @@ public class AdminSetupController {
         return dto;
     }
 
-    private RecommendedPaymentMethodDTO toPmDTO(RecommendedPaymentMethod pm) {
-        RecommendedPaymentMethodDTO dto = new RecommendedPaymentMethodDTO();
-        dto.setId(pm.getId());
-        dto.setName(pm.getName());
-        dto.setIconUrl(pm.getIconUrl());
-        if (pm.getPaymentMethodType() != null) {
-            dto.setPaymentMethodType(pm.getPaymentMethodType().name());
-        }
-        if (pm.getEntity() != null) {
-            dto.setRecommendedEntityId(pm.getEntity().getId());
+    private RecommendedMerchantShortcutDTO toMerchantShortcutDTO(RecommendedMerchantShortcut m) {
+        RecommendedMerchantShortcutDTO dto = new RecommendedMerchantShortcutDTO();
+        dto.setId(m.getId());
+        dto.setName(m.getName());
+        dto.setIcon(m.getIcon());
+        dto.setDisplayOrder(m.getDisplayOrder());
+        if (m.getCategory() != null) {
+            dto.setRecommendedCategoryId(m.getCategory().getId());
         }
         return dto;
     }
