@@ -13,10 +13,13 @@ permissions:
 jobs:
   test-suite:
     name: Run test suite
-    # Validate feature/* -> develop and release/* -> main pull requests.
+    # Validate feature/* -> develop, release/*/hotfix/* -> main, and
+    # automatically-created backport/* -> develop pull requests.
     if: >
-      (github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')) ||
-      (github.base_ref == 'main' && startsWith(github.head_ref, 'release/'))
+      (github.base_ref == 'develop' &&
+        (startsWith(github.head_ref, 'feature/') || startsWith(github.head_ref, 'backport/'))) ||
+      (github.base_ref == 'main' &&
+        (startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')))
     runs-on: ubuntu-latest
 
     steps:
