@@ -24,10 +24,8 @@ import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.CurrencyRepository;
 import com.spendwise.repository.PersonalDebtRepository;
 import com.spendwise.repository.ExpenseRepository;
-import com.spendwise.repository.GmailCredentialRepository;
 import com.spendwise.repository.IncomeRepository;
 import com.spendwise.repository.IssuingEntityRepository;
-import com.spendwise.repository.MailImportRepository;
 import com.spendwise.repository.MerchantBindingRepository;
 import com.spendwise.repository.MerchantShortcutRepository;
 import com.spendwise.repository.PasswordResetTokenRepository;
@@ -87,9 +85,7 @@ public class AuthService implements IAuthService {
     private final SavingsWalletRepository savingsWalletRepository;
     private final RecurrentExpenseRepository recurrentExpenseRepository;
     private final RecurrentExpenseRecordRepository recurrentExpenseRecordRepository;
-    private final MailImportRepository mailImportRepository;
     private final MerchantBindingRepository merchantBindingRepository;
-    private final GmailCredentialRepository gmailCredentialRepository;
     private final MerchantShortcutRepository merchantShortcutRepository;
     private final RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository;
     private final ModelMapper modelMapper = new ModelMapper();
@@ -119,9 +115,7 @@ public class AuthService implements IAuthService {
                        SavingsWalletRepository savingsWalletRepository,
                        RecurrentExpenseRepository recurrentExpenseRepository,
                        RecurrentExpenseRecordRepository recurrentExpenseRecordRepository,
-                       MailImportRepository mailImportRepository,
                        MerchantBindingRepository merchantBindingRepository,
-                       GmailCredentialRepository gmailCredentialRepository,
                        MerchantShortcutRepository merchantShortcutRepository,
                        RecommendedMerchantShortcutRepository recommendedMerchantShortcutRepository) {
         this.userRepository = userRepository;
@@ -146,9 +140,7 @@ public class AuthService implements IAuthService {
         this.savingsWalletRepository = savingsWalletRepository;
         this.recurrentExpenseRepository = recurrentExpenseRepository;
         this.recurrentExpenseRecordRepository = recurrentExpenseRecordRepository;
-        this.mailImportRepository = mailImportRepository;
         this.merchantBindingRepository = merchantBindingRepository;
-        this.gmailCredentialRepository = gmailCredentialRepository;
         this.merchantShortcutRepository = merchantShortcutRepository;
         this.recommendedMerchantShortcutRepository = recommendedMerchantShortcutRepository;
     }
@@ -401,7 +393,6 @@ public class AuthService implements IAuthService {
 
         // Delete in FK-safe order
         recurrentExpenseRecordRepository.deleteAllByUser(user);
-        mailImportRepository.deleteAllByUser(user);
         expenseRepository.deleteAllByUser(user);
         recurrentExpenseRepository.deleteAllByUser(user);
         incomeRepository.deleteAllByUser(user);
@@ -415,7 +406,6 @@ public class AuthService implements IAuthService {
         issuingEntityRepository.deleteAllByUser(user);
         categoryRepository.deleteAllByUser(user);
         currencyRepository.deleteAllByUser(user);
-        gmailCredentialRepository.deleteByUser(user);
         passwordResetTokenRepository.deleteByUser(user);
         verificationTokenRepository.deleteByUser(user);
         refreshTokenService.deleteAllForUser(user);
